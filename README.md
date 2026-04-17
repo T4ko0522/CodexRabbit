@@ -197,6 +197,12 @@ docker compose logs -f
 | `threadAutoArchiveMinutes` | `1440`     | `60` / `1440` / `4320` / `10080`     |
 | `enableThreadChat`         | `true`     | スレッド内での対話応答               |
 
+### workspace
+
+| キー         | デフォルト | 説明                                                                           |
+| ------------ | ---------- | ------------------------------------------------------------------------------ |
+| `ttlMinutes` | `1440`     | 非活性スレッドに紐づく clone ディレクトリを自動回収するまでの分数 (10 分間隔で sweep) |
+
 ## GitHub フィードバック
 
 `codex-review[bot]` の名義で GitHub に直接フィードバックします。
@@ -214,7 +220,7 @@ docker compose logs -f
 
 | 状態               | 挙動                                                                                                |
 | ------------------ | --------------------------------------------------------------------------------------------------- |
-| **通常運用**       | 最後の活動から `threadAutoArchiveMinutes` 経過で自動削除 (10 分間隔スイープ)。会話中は TTL リセット |
+| **通常運用**       | 最後の活動から `workspace.ttlMinutes` 経過で自動削除 (10 分間隔スイープ)。会話中は TTL リセット |
 | **プロセス再起動** | 全 workspace 消失。会話履歴は SQLite に残るが、実ファイル参照なしの応答になる                       |
 | **異常終了**       | `WORKSPACES_DIR` にディレクトリが残る。手動削除が必要                                               |
 
@@ -231,7 +237,7 @@ pnpm check        # vp check (Oxlint + Oxfmt + tsc)
 pnpm typecheck    # tsc --noEmit
 ```
 
-テストは `vite-plus/test` から import し、`src/**/*.test.ts` に配置。現在 100 テスト / カバレッジ約 61%。
+テストは `vite-plus/test` から import し、`src/**/*.test.ts` に配置。
 
 ## セキュリティ
 
