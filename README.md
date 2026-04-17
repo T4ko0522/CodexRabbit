@@ -57,10 +57,13 @@ Quickstart (既に事前準備が済んでいる場合):
 cp .env.example .env            # 値を編集
 cp config.example.yml config.yml
 
-pnpm install
-pnpm build                      # ホストで dist/ を生成
-docker compose up -d --build
+# GHCR の公開イメージを使う場合
+docker pull ghcr.io/t4ko0522/codexrabbit:latest
+docker compose up -d
 docker compose logs -f codex-review
+
+# ローカルでビルドする場合 (マルチステージビルド、ホスト側の Node.js 不要)
+docker compose up -d --build
 ```
 
 ## 環境変数リファレンス (.env)
