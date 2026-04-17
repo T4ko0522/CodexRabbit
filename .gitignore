@@ -7,3 +7,4 @@ data/
 workspaces/
 *.log
 .DS_Store
+coverage/

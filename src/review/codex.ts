@@ -52,7 +52,7 @@ export async function runCodex({
   }
 }
 
-function stripAnsi(s: string): string {
+export function stripAnsi(s: string): string {
   // eslint-disable-next-line no-control-regex
   return s.replace(/\u001B\[[0-9;?]*[ -/]*[@-~]/g, "");
 }

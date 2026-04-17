@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { chunkMarkdown } from "./publish.ts";
+import { ChannelType } from "discord.js";
+import { assertTextChannel, chunkMarkdown } from "./publish.ts";
 
 describe("chunkMarkdown", () => {
   it("returns input unchanged when within limit", () => {
@@ -44,5 +45,39 @@ describe("chunkMarkdown", () => {
     for (const c of chunks) {
       expect(c.length).toBeLessThanOrEqual(limit);
     }
+  });
+
+  it("handles text with no newlines", () => {
+    const text = "a".repeat(500);
+    const chunks = chunkMarkdown(text, 200);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const c of chunks) expect(c.length).toBeLessThanOrEqual(200);
+  });
+
+  it("handles multiple code fence pairs", () => {
+    const md = "```ts\ncode1\n```\ntext\n```js\ncode2\n```";
+    const chunks = chunkMarkdown(md, 50);
+    for (const c of chunks) {
+      const fenceCount = (c.match(/```/g) ?? []).length;
+      expect(fenceCount % 2).toBe(0);
+    }
+  });
+});
+
+describe("assertTextChannel", () => {
+  it("accepts a guild text channel", () => {
+    expect(() => assertTextChannel({ type: ChannelType.GuildText })).not.toThrow();
+  });
+
+  it("rejects null", () => {
+    expect(() => assertTextChannel(null)).toThrow("DISCORD_CHANNEL_ID must point to a guild text channel");
+  });
+
+  it("rejects DM channel type", () => {
+    expect(() => assertTextChannel({ type: ChannelType.DM })).toThrow();
+  });
+
+  it("rejects undefined", () => {
+    expect(() => assertTextChannel(undefined)).toThrow();
   });
 });
