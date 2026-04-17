@@ -1,11 +1,30 @@
 # codex-review の動作設定
 # 環境ごとに config.yml にコピーして編集する
 
-# 各イベント種別の ON/OFF
+# 各イベント種別の設定
 events:
-  push: true
-  pull_request: true
-  issues: true
+  push:
+    enabled: true
+    # "all": 全 push を自動レビュー
+    # "protected-only": Protected Branch への push だけ自動レビュー (推奨)
+    mode: protected-only
+  pull_request:
+    enabled: true
+    # ここに含まれる PR action だけ自動レビュー。他は mention 待ち
+    # 例: opened だけ自動、synchronize 後の再レビューは @CodexRabbit[bot] をコメントで呼ぶ
+    autoReviewOn:
+      - opened
+  issues:
+    enabled: true
+    # 空配列なら全アクションが mention 待ち (自動レビューしない)
+    autoReviewOn: []
+
+# PR/Issue コメント経由の mention 検出
+mention:
+  # コメント本文にこれらの文字列が含まれるとレビューを実行
+  # 空配列にすると mention 機能そのものを無効化
+  triggers:
+    - "@CodexRabbit[bot]"
 
 # レビュー対象の絞り込み (いずれも空なら全て対象)
 filters:
@@ -36,10 +55,12 @@ review:
     - package-lock.json
     - yarn.lock
 
-# GitHub へのフィードバック (GitHub App 認証で codex-review[bot] として投稿)
+# GitHub へのフィードバック (GitHub App 認証で CodexRabbit[bot] として投稿)
 github:
   # PR にレビューコメントとして投稿する
   prReviewComment: true
+  # push レビューで head コミットにコメントを投稿する
+  pushCommitComment: true
   # push レビューで Critical/High が見つかった場合 Issue を作成する
   pushIssueOnSevere: true
 
@@ -51,3 +72,8 @@ discord:
   threadAutoArchiveMinutes: 1440
   # スレッド内で Bot への返信/メンションを対話として扱うか
   enableThreadChat: true
+
+# 対話用 workspace (clone ディレクトリ) のライフサイクル
+workspace:
+  # 非活性スレッドに紐づく clone を自動回収するまでの分数 (10 分間隔で sweep)
+  ttlMinutes: 1440
