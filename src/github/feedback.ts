@@ -2,16 +2,36 @@ import type { Octokit } from "@octokit/rest";
 import type { Logger } from "../logger.ts";
 import type { ReviewJob } from "../types.ts";
 
-const MAX_BODY = 60_000; // GitHub API body 上限 65536 に余裕を持たせる
+// GitHub API body 上限 65536 バイトに余裕を持たせた閾値 (バイト単位)
+const MAX_BODY_BYTES = 60_000;
+const TRUNCATED_SUFFIX = "\n\n... (truncated)";
 
 function splitRepo(repo: string) {
   const [owner, name] = repo.split("/");
   return { owner: owner!, repo: name! };
 }
 
+/**
+ * 本文が GitHub の API body 上限に収まるよう UTF-8 バイト長で切り詰める。
+ * マルチバイト文字 (日本語など) を考慮し、コードポイント境界で安全に切る。
+ */
 function safeBody(markdown: string): string {
-  if (markdown.length <= MAX_BODY) return markdown;
-  return `${markdown.slice(0, MAX_BODY)}\n\n... (truncated)`;
+  if (Buffer.byteLength(markdown, "utf8") <= MAX_BODY_BYTES) return markdown;
+  const suffixBytes = Buffer.byteLength(TRUNCATED_SUFFIX, "utf8");
+  const budget = MAX_BODY_BYTES - suffixBytes;
+  // 文字単位に走査して budget を超える直前で止める
+  let bytes = 0;
+  let end = 0;
+  for (let i = 0; i < markdown.length; ) {
+    const cp = markdown.codePointAt(i)!;
+    const step = cp > 0xffff ? 2 : 1;
+    const charBytes = Buffer.byteLength(String.fromCodePoint(cp), "utf8");
+    if (bytes + charBytes > budget) break;
+    bytes += charBytes;
+    i += step;
+    end = i;
+  }
+  return `${markdown.slice(0, end)}${TRUNCATED_SUFFIX}`;
 }
 
 /**

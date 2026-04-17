@@ -128,13 +128,24 @@ describe("postPrReview", () => {
     await expect(postPrReview(octokit, makePrJob(), "review", logger)).resolves.toBeUndefined();
   });
 
-  it("truncates body exceeding 60k chars", async () => {
+  it("truncates body exceeding 60k bytes (ASCII)", async () => {
     const createReview = vi.fn().mockResolvedValue({});
     const octokit = { rest: { pulls: { createReview } } } as any;
     const longBody = "x".repeat(65_000);
     await postPrReview(octokit, makePrJob(), longBody, logger);
     const call = createReview.mock.calls[0]![0];
-    expect(call.body.length).toBeLessThanOrEqual(60_020);
+    expect(Buffer.byteLength(call.body, "utf8")).toBeLessThanOrEqual(60_000);
+    expect(call.body).toContain("truncated");
+  });
+
+  it("truncates multibyte body by byte length (Japanese)", async () => {
+    const createReview = vi.fn().mockResolvedValue({});
+    const octokit = { rest: { pulls: { createReview } } } as any;
+    // 日本語 1 文字 = UTF-8 で 3 バイト。30000 文字 ≒ 90000 バイトで上限超え
+    const longBody = "あ".repeat(30_000);
+    await postPrReview(octokit, makePrJob(), longBody, logger);
+    const call = createReview.mock.calls[0]![0];
+    expect(Buffer.byteLength(call.body, "utf8")).toBeLessThanOrEqual(60_000);
     expect(call.body).toContain("truncated");
   });
 });
