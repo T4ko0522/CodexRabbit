@@ -17,6 +17,11 @@ vi.mock("execa", () => ({
   execa: vi.fn(),
 }));
 
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return { ...actual, rmSync: vi.fn(actual.rmSync) };
+});
+
 const SAMPLE_DIFF = [
   "diff --git a/src/index.ts b/src/index.ts",
   "--- a/src/index.ts",
@@ -547,7 +552,7 @@ describe("getDiff", () => {
     expect(out).toBe("");
   });
 
-  it("injects GitHub auth env when token is given", async () => {
+  it("does not pass auth env to git show fallback", async () => {
     const head = "a".repeat(40);
     vi.mocked(execa as any).mockImplementation(async (_bin: any, args: any) => {
       if (args?.[0] === "show") return { stdout: "x" } as any;
@@ -558,23 +563,46 @@ describe("getDiff", () => {
       (c: any) => c[1]?.[0] === "show",
     )!;
     const opts = showCall[2] as any;
-    // git show の呼び出しには env は渡っていない (実装ではそうなっている) ことを確認
-    // → 行 209 は env を渡さない fallback なので、token 有無の挙動違いは ここでは観察できない
     expect(opts.cwd).toBe("/work");
+    // git show fallback は auth env を渡さない
+    expect(opts.env).toBeUndefined();
+  });
+
+  it("injects auth env into fetch and diff when baseSha and token are given", async () => {
+    const base = "b".repeat(40);
+    const head = "a".repeat(40);
+    vi.mocked(execa as any).mockImplementation(async (_bin: any, args: any) => {
+      if (args?.[0] === "diff") return { stdout: "DIFF" } as any;
+      return { stdout: "" } as any;
+    });
+    await getDiff("/work", base, head, logger, "ghs_tok");
+    const fetchCall = (vi.mocked(execa).mock.calls as any[]).find(
+      (c: any) => c[1]?.[0] === "fetch",
+    )!;
+    const diffCall = (vi.mocked(execa).mock.calls as any[]).find(
+      (c: any) => c[1]?.[0] === "diff",
+    )!;
+    expect(fetchCall[2].env.GIT_CONFIG_COUNT).toBe("1");
+    expect(fetchCall[2].env.GIT_CONFIG_KEY_0).toBe("http.extraHeader");
+    expect(diffCall[2].env.GIT_CONFIG_COUNT).toBe("1");
   });
 });
 
 describe("cleanupWorkspace (via createIsolatedWorkspace)", () => {
   it("swallows rmSync errors and logs warn", () => {
+    const warnFn = vi.fn();
+    const spyLogger = { ...logger, warn: warnFn } as any;
     const workspacesDir = mkdtempSync(join(tmpdir(), "codex-review-cleanup-"));
     try {
-      const ws = createIsolatedWorkspace(workspacesDir, logger);
-      // ディレクトリ内にファイルを作って確認
+      const ws = createIsolatedWorkspace(workspacesDir, spyLogger);
       writeFileSync(join(ws.path, "file.txt"), "hi");
-      // 二度 cleanup しても例外を投げずに完走する (存在しない dir への rmSync は force:true で success)
-      ws.cleanup();
-      ws.cleanup();
-      expect(existsSync(ws.path)).toBe(false);
+      // rmSync が例外を投げるようにモックし、catch → logger.warn のパスを検証
+      vi.mocked(rmSync).mockImplementationOnce(() => {
+        throw new Error("EPERM: operation not permitted");
+      });
+      ws.cleanup(); // 例外を投げずに完走する
+      expect(warnFn).toHaveBeenCalledOnce();
+      expect(warnFn.mock.calls[0][1]).toBe("workspace cleanup failed");
     } finally {
       rmSync(workspacesDir, { recursive: true, force: true });
     }
