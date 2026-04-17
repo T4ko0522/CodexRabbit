@@ -24,7 +24,7 @@ async function main() {
   const store = new Store(env.DATA_DIR);
   const threadContext = new Map<string, ThreadContext>();
 
-  const octokit = createGitHubClient(env.GITHUB_TOKEN || undefined, logger);
+  const gh = await createGitHubClient(env, logger);
   const bot = new DiscordBot({ env, config, logger, store, threadContext });
   await bot.start();
 
@@ -33,15 +33,15 @@ async function main() {
     concurrency: 1,
     handle: async (job) => {
       logger.info({ repo: job.repo, kind: job.kind, number: job.number }, "review starting");
-      const result = await runReview(job, { env, config, logger });
+      const result = await runReview(job, { env, config, logger, githubToken: gh?.token });
 
       // GitHub フィードバック (best-effort、エラーは内部で吸収)
-      if (octokit) {
+      if (gh) {
         if (config.github.prReviewComment && job.kind === "pull_request") {
-          await postPrReview(octokit, job, result.markdown, logger);
+          await postPrReview(gh.octokit, job, result.markdown, logger);
         }
         if (config.github.pushIssueOnSevere && job.kind === "push") {
-          await createPushIssue(octokit, job, result.markdown, logger);
+          await createPushIssue(gh.octokit, job, result.markdown, logger);
         }
       }
 

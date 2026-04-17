@@ -8,6 +8,11 @@ const EnvSchema = z.object({
 
   GITHUB_TOKEN: z.string().optional().default(""),
 
+  // GitHub App 認証 (GITHUB_TOKEN より優先)
+  GITHUB_APP_ID: z.string().optional().default(""),
+  GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional().default(""),
+  GITHUB_APP_INSTALLATION_ID: z.string().optional().default(""),
+
   DISCORD_BOT_TOKEN: z.string().min(1, "DISCORD_BOT_TOKEN is required"),
   DISCORD_CHANNEL_ID: z.string().min(1, "DISCORD_CHANNEL_ID is required"),
 

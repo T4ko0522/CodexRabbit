@@ -124,10 +124,26 @@ docker compose logs -f
 
 ## GitHub フィードバック
 
-`GITHUB_TOKEN` (repo スコープの PAT) を設定すると、レビュー結果を Discord だけでなく GitHub にも直接反映します。
+GitHub App 認証または PAT を設定すると、レビュー結果を Discord だけでなく GitHub にも直接反映します。
 
-- **PR レビューコメント**: `pull_request` イベント時、`pulls.createReview` で PR にレビュー本文を投稿します (`config.github.prReviewComment`)。
-- **push Issue 自動作成**: `push` イベント時、レビューに Critical / High の指摘が含まれていれば Issue を自動起票します (`config.github.pushIssueOnSevere`)。ラベル `codex-review` が付与されます。
+### 認証方式
+
+**GitHub App (推奨)**: `codex-review[bot]` のような専用アカウントで投稿。App を Private にすれば自分だけが利用可能。
+
+| 環境変数 | 説明 |
+|---------|------|
+| `GITHUB_APP_ID` | GitHub App の App ID |
+| `GITHUB_APP_PRIVATE_KEY_PATH` | PEM 秘密鍵のファイルパス |
+| `GITHUB_APP_INSTALLATION_ID` | App の Installation ID |
+
+**PAT (フォールバック)**: `GITHUB_TOKEN` に `repo` スコープの PAT を設定。投稿者は PAT 所有者のアカウント名になる。
+
+App 認証が設定されていればそちらを優先し、なければ PAT を使います。どちらも未設定なら GitHub フィードバックは無効化されます。
+
+### 機能
+
+- **PR レビューコメント**: `pulls.createReview` で PR にレビュー本文を投稿 (`config.github.prReviewComment`)
+- **push Issue 自動作成**: Critical / High の指摘があれば Issue を自動起票 (`config.github.pushIssueOnSevere`)
 
 いずれも best-effort で動作し、GitHub API エラーは Discord 投稿やキュー処理をブロックしません。
 

@@ -18,6 +18,8 @@ export interface RunReviewDeps {
   env: Env;
   config: AppConfig;
   logger: Logger;
+  /** clone/fetch 用 GitHub トークン (App Installation Token or PAT) */
+  githubToken?: string;
 }
 
 /**
@@ -25,7 +27,7 @@ export interface RunReviewDeps {
  * 呼び出し側は cleanup() を必要に応じて呼ぶ (スレッド対話で使い続けるなら保持)。
  */
 export async function runReview(job: ReviewJob, deps: RunReviewDeps): Promise<ReviewResult> {
-  const { env, config, logger } = deps;
+  const { env, config, logger, githubToken } = deps;
   const extraArgs = splitArgs(env.CODEX_EXTRA_ARGS);
 
   // issue は clone 不要
@@ -50,12 +52,12 @@ export async function runReview(job: ReviewJob, deps: RunReviewDeps): Promise<Re
     repoUrl: job.repoUrl,
     sha: job.sha,
     depth: config.review.cloneDepth,
-    githubToken: env.GITHUB_TOKEN || undefined,
+    githubToken,
     headRepoUrl: job.headRepoUrl,
     logger,
   });
 
-  const rawDiff = await getDiff(ws.path, job.baseSha, job.sha, logger, env.GITHUB_TOKEN || undefined);
+  const rawDiff = await getDiff(ws.path, job.baseSha, job.sha, logger, githubToken);
   const filteredDiff = filterDiff(rawDiff, {
     includeExtensions: config.review.includeExtensions,
     excludePaths: config.review.excludePaths,
