@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildJobFromPayload } from "./events.ts";
+import { buildJobFromPayload, stripNonMentionContent } from "./events.ts";
+
+describe("stripNonMentionContent", () => {
+  it("removes fenced code blocks", () => {
+    expect(stripNonMentionContent("before\n```\n@bot\n```\nafter")).toBe("before\n\nafter");
+  });
+
+  it("removes inline code", () => {
+    expect(stripNonMentionContent("see `@bot` here")).toBe("see  here");
+  });
+
+  it("removes blockquote lines", () => {
+    expect(stripNonMentionContent("> quoted @bot\nreal text")).toBe("\nreal text");
+  });
+
+  it("preserves normal text", () => {
+    expect(stripNonMentionContent("hello @bot")).toBe("hello @bot");
+  });
+});
 
 describe("buildJobFromPayload - push", () => {
   it("maps push event with head_commit", () => {
@@ -250,6 +268,80 @@ describe("buildJobFromPayload - issue_comment", () => {
     expect(job?.number).toBe(7);
     expect(job?.triggeredBy).toBe("mention");
     expect(job?.commentId).toBe(7777);
+  });
+
+  it("ignores trigger inside blockquote", () => {
+    const job = buildJobFromPayload(
+      {
+        event: "issue_comment",
+        repository: "acme/widget",
+        sender: "bob",
+        payload: {
+          ...prCommentPayload,
+          comment: { ...prCommentPayload.comment, body: "> @CodexRabbit[bot] said something\nI agree" },
+        },
+      },
+      { mentionTriggers: ["@CodexRabbit[bot]"] },
+    );
+    expect(job).toBeNull();
+  });
+
+  it("ignores trigger inside fenced code block", () => {
+    const job = buildJobFromPayload(
+      {
+        event: "issue_comment",
+        repository: "acme/widget",
+        sender: "bob",
+        payload: {
+          ...prCommentPayload,
+          comment: {
+            ...prCommentPayload.comment,
+            body: "check this:\n```\n@CodexRabbit[bot]\n```\n",
+          },
+        },
+      },
+      { mentionTriggers: ["@CodexRabbit[bot]"] },
+    );
+    expect(job).toBeNull();
+  });
+
+  it("ignores trigger inside inline code", () => {
+    const job = buildJobFromPayload(
+      {
+        event: "issue_comment",
+        repository: "acme/widget",
+        sender: "bob",
+        payload: {
+          ...prCommentPayload,
+          comment: {
+            ...prCommentPayload.comment,
+            body: "use `@CodexRabbit[bot]` to trigger",
+          },
+        },
+      },
+      { mentionTriggers: ["@CodexRabbit[bot]"] },
+    );
+    expect(job).toBeNull();
+  });
+
+  it("detects trigger outside of quoted/code content", () => {
+    const job = buildJobFromPayload(
+      {
+        event: "issue_comment",
+        repository: "acme/widget",
+        sender: "bob",
+        payload: {
+          ...prCommentPayload,
+          comment: {
+            ...prCommentPayload.comment,
+            body: "> previous comment\n@CodexRabbit[bot] please review",
+          },
+        },
+      },
+      { mentionTriggers: ["@CodexRabbit[bot]"] },
+    );
+    expect(job?.kind).toBe("pull_request");
+    expect(job?.triggeredBy).toBe("mention");
   });
 
   it("matches any of multiple triggers", () => {

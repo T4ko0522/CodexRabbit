@@ -6,6 +6,22 @@ export interface BuildJobOptions {
 }
 
 /**
+ * コメント本文からコードブロック・インラインコード・引用行を除去し、
+ * 実際のコメント部分のみを返す。メンション誤検知を防ぐため。
+ */
+export function stripNonMentionContent(body: string): string {
+  return (
+    body
+      // fenced code blocks (```...```)
+      .replace(/```[\s\S]*?```/g, "")
+      // inline code (`...`)
+      .replace(/`[^`]+`/g, "")
+      // blockquote lines (> ...)
+      .replace(/^>.*$/gm, "")
+  );
+}
+
+/**
  * GitHub raw payload から ReviewJob を組み立てる。
  * 対象外アクション (closed PR など) や mention 未一致の issue_comment は null を返す。
  */
@@ -99,7 +115,8 @@ export function buildJobFromPayload(
     const issue = payload.issue;
     if (!comment || !issue) return null;
     const body = String(comment.body ?? "");
-    if (!triggers.some((t) => body.includes(t))) return null;
+    const effective = stripNonMentionContent(body);
+    if (!triggers.some((t) => effective.includes(t))) return null;
     const commentId = typeof comment.id === "number" ? comment.id : undefined;
     const commentUrl = typeof comment.html_url === "string" ? comment.html_url : undefined;
     const commenter = sender || comment.user?.login || "unknown";
