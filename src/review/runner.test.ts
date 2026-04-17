@@ -25,10 +25,15 @@ vi.mock("execa", () => ({
 const logger = pino({ level: "silent" });
 
 const config: AppConfig = {
-  events: { push: true, pull_request: true, issues: true },
+  events: {
+    push: { enabled: true, mode: "all" },
+    pull_request: { enabled: true, autoReviewOn: ["opened"] },
+    issues: { enabled: true, autoReviewOn: [] },
+  },
   filters: { repositories: [], branches: [], skipDraftPullRequests: true, skipBotSenders: true },
   review: { maxDiffChars: 200_000, cloneDepth: 50, includeExtensions: [], excludePaths: [] },
-  github: { prReviewComment: true, pushIssueOnSevere: true },
+  github: { prReviewComment: true, pushCommitComment: true, pushIssueOnSevere: true },
+  mention: { triggers: ["@CodexRabbit[bot]"] },
   discord: { chunkSize: 1900, threadAutoArchiveMinutes: 1440, enableThreadChat: true },
   workspace: { ttlMinutes: 1440 },
 };
@@ -62,6 +67,7 @@ beforeEach(() => {
     CODEX_BIN: "codex",
     CODEX_EXTRA_ARGS: "",
     CODEX_TIMEOUT_MS: 900_000,
+    SHUTDOWN_TIMEOUT_MS: 30_000,
     WORKSPACES_DIR: workspacesDir,
     DATA_DIR: workspacesDir,
     LOG_LEVEL: "info",

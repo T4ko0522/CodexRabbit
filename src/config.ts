@@ -5,11 +5,34 @@ import { z } from "zod";
 const ConfigSchema = z.object({
   events: z
     .object({
-      push: z.boolean().default(true),
-      pull_request: z.boolean().default(true),
-      issues: z.boolean().default(true),
+      push: z
+        .object({
+          enabled: z.boolean().default(true),
+          // "all": 全 push を自動レビュー
+          // "protected-only": Protected Branch への push だけ自動レビュー
+          mode: z.enum(["all", "protected-only"]).default("protected-only"),
+        })
+        .default({ enabled: true, mode: "protected-only" }),
+      pull_request: z
+        .object({
+          enabled: z.boolean().default(true),
+          // ここに含まれる action だけ自動レビュー。他は mention 待ち
+          autoReviewOn: z.array(z.string()).default(["opened"]),
+        })
+        .default({ enabled: true, autoReviewOn: ["opened"] }),
+      issues: z
+        .object({
+          enabled: z.boolean().default(true),
+          // 空 = 全アクションを mention 待ち
+          autoReviewOn: z.array(z.string()).default([]),
+        })
+        .default({ enabled: true, autoReviewOn: [] }),
     })
-    .default({ push: true, pull_request: true, issues: true }),
+    .default({
+      push: { enabled: true, mode: "protected-only" },
+      pull_request: { enabled: true, autoReviewOn: ["opened"] },
+      issues: { enabled: true, autoReviewOn: [] },
+    }),
 
   filters: z
     .object({
@@ -42,12 +65,23 @@ const ConfigSchema = z.object({
   github: z
     .object({
       prReviewComment: z.boolean().default(true),
+      // push 時にコミットコメント (POST /commits/:sha/comments) で投稿
+      pushCommitComment: z.boolean().default(true),
       pushIssueOnSevere: z.boolean().default(true),
     })
     .default({
       prReviewComment: true,
+      pushCommitComment: true,
       pushIssueOnSevere: true,
     }),
+
+  mention: z
+    .object({
+      // PR/Issue コメント本文にこれらの文字列が含まれると mention 経由レビューを実行。
+      // 空配列なら mention 機能そのものを無効化。
+      triggers: z.array(z.string()).default(["@CodexRabbit[bot]"]),
+    })
+    .default({ triggers: ["@CodexRabbit[bot]"] }),
 
   discord: z
     .object({

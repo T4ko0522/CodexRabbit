@@ -1,4 +1,8 @@
-export type EventKind = "push" | "pull_request" | "issues";
+/** HTTP で受け取る GitHub イベントの種類 */
+export type EventKind = "push" | "pull_request" | "issues" | "issue_comment";
+
+/** 内部ジョブとして扱う対象種別 (issue_comment は発火トリガにしかならないので含めない) */
+export type JobKind = "push" | "pull_request" | "issues";
 
 /** GitHub Actions から送られてくる HTTP ペイロード本体 */
 export interface IncomingWebhook {
@@ -11,7 +15,7 @@ export interface IncomingWebhook {
 
 /** キューへ積むレビュージョブ */
 export interface ReviewJob {
-  kind: EventKind;
+  kind: JobKind;
   repo: string; // owner/name
   repoUrl: string; // https://github.com/owner/name
   /** push: head_commit.id / PR: pull_request.head.sha */
@@ -30,18 +34,24 @@ export interface ReviewJob {
   number?: number;
   /** PR/issue の本文 */
   body?: string;
-  /** PR の action (opened / synchronize / ...) */
+  /** PR の action (opened / synchronize / ...) or "mention" */
   action?: string;
   /** push のコミット一覧などから作るサマリ文 */
   summary?: string;
   isDraft?: boolean;
+  /** 自動発火 or mention 発火の区別 */
+  triggeredBy?: "auto" | "mention";
+  /** mention 経由レビュー時の起因コメント ID */
+  commentId?: number;
+  /** mention 経由レビュー時の起因コメント URL */
+  commentUrl?: string;
 }
 
 export interface ThreadRecord {
   threadId: string;
   repo: string;
   sha?: string;
-  kind: EventKind;
+  kind: JobKind;
   number?: number;
   createdAt: number;
   /**

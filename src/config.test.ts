@@ -56,18 +56,39 @@ describe("branchAllowed", () => {
 describe("loadConfig", () => {
   it("returns defaults when file does not exist", () => {
     const cfg = loadConfig(join(tmpDir, "nonexistent.yml"));
-    expect(cfg.events.push).toBe(true);
+    expect(cfg.events.push.enabled).toBe(true);
+    expect(cfg.events.push.mode).toBe("protected-only");
+    expect(cfg.events.pull_request.enabled).toBe(true);
+    expect(cfg.events.pull_request.autoReviewOn).toEqual(["opened"]);
+    expect(cfg.events.issues.enabled).toBe(true);
+    expect(cfg.events.issues.autoReviewOn).toEqual([]);
+    expect(cfg.mention.triggers).toEqual(["@CodexRabbit[bot]"]);
     expect(cfg.review.maxDiffChars).toBe(200_000);
     expect(cfg.discord.chunkSize).toBe(1900);
     expect(cfg.github.prReviewComment).toBe(true);
+    expect(cfg.github.pushCommitComment).toBe(true);
+    expect(cfg.github.pushIssueOnSevere).toBe(true);
   });
 
   it("parses a valid config file", () => {
     const file = join(tmpDir, "config.yml");
-    writeFileSync(file, "events:\n  push: false\nreview:\n  cloneDepth: 10\n");
+    writeFileSync(
+      file,
+      [
+        "events:",
+        "  push:",
+        "    mode: all",
+        "  pull_request:",
+        "    autoReviewOn: [opened, synchronize]",
+        "review:",
+        "  cloneDepth: 10",
+        "",
+      ].join("\n"),
+    );
     const cfg = loadConfig(file);
-    expect(cfg.events.push).toBe(false);
-    expect(cfg.events.pull_request).toBe(true);
+    expect(cfg.events.push.mode).toBe("all");
+    expect(cfg.events.push.enabled).toBe(true);
+    expect(cfg.events.pull_request.autoReviewOn).toEqual(["opened", "synchronize"]);
     expect(cfg.review.cloneDepth).toBe(10);
   });
 
@@ -76,8 +97,30 @@ describe("loadConfig", () => {
     writeFileSync(file, "discord:\n  chunkSize: 1500\n");
     const cfg = loadConfig(file);
     expect(cfg.discord.chunkSize).toBe(1500);
-    expect(cfg.events.push).toBe(true);
+    expect(cfg.events.push.enabled).toBe(true);
+    expect(cfg.events.push.mode).toBe("protected-only");
     expect(cfg.filters.repositories).toEqual([]);
+  });
+
+  it("supports disabling an event via enabled: false", () => {
+    const file = join(tmpDir, "disabled.yml");
+    writeFileSync(file, "events:\n  push:\n    enabled: false\n");
+    const cfg = loadConfig(file);
+    expect(cfg.events.push.enabled).toBe(false);
+    expect(cfg.events.push.mode).toBe("protected-only");
+  });
+
+  it("rejects invalid push.mode", () => {
+    const file = join(tmpDir, "bad-mode.yml");
+    writeFileSync(file, "events:\n  push:\n    mode: nonsense\n");
+    expect(() => loadConfig(file)).toThrow();
+  });
+
+  it("accepts custom mention triggers", () => {
+    const file = join(tmpDir, "mention.yml");
+    writeFileSync(file, "mention:\n  triggers: ['@reviewer', '@bot']\n");
+    const cfg = loadConfig(file);
+    expect(cfg.mention.triggers).toEqual(["@reviewer", "@bot"]);
   });
 
   it("rejects invalid chunkSize > 2000", () => {
