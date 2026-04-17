@@ -124,9 +124,7 @@ export async function getDiff(
       /* ignore */
     }
     try {
-      const { stdout } = await execa("git", ["diff", "--no-color", `${baseSha}..${headSha}`], {
-        cwd: workdir,
-      });
+      const { stdout } = await execa("git", ["diff", "--no-color", baseSha, headSha], opts);
       return stdout;
     } catch (err) {
       logger.warn({ err: (err as Error).message }, "diff with base failed, falling back to HEAD^");

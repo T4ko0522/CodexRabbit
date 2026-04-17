@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const EnvSchema = z.object({
-  HTTP_HOST: z.string().default("0.0.0.0"),
+  HTTP_HOST: z.string().default("127.0.0.1"),
   HTTP_PORT: z.coerce.number().int().positive().default(3000),
 
   WEBHOOK_SECRET: z.string().min(8, "WEBHOOK_SECRET must be at least 8 chars"),

@@ -43,7 +43,7 @@ describe("loadEnv", () => {
 
   it("loads valid env with defaults", () => {
     const env = loadEnv();
-    expect(env.HTTP_HOST).toBe("0.0.0.0");
+    expect(env.HTTP_HOST).toBe("127.0.0.1");
     expect(env.HTTP_PORT).toBe(3000);
     expect(env.WEBHOOK_SECRET).toBe("test-secret-12345");
     expect(env.CODEX_TIMEOUT_MS).toBe(900_000);
