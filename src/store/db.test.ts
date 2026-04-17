@@ -99,6 +99,18 @@ describe("Store", () => {
       expect(store.listMessages("t1")).toHaveLength(1);
       expect(store.listMessages("t1")[0]!.content).toBe("for t1");
     });
+
+    it("preserves messages when insertThread is called twice on the same id", () => {
+      // FK 有効 + INSERT OR REPLACE だと ON DELETE CASCADE で messages が消える。
+      // UPSERT で保持されることを担保する。
+      store.insertThread({ threadId: "t1", repo: "a/b", kind: "push", createdAt: 1 });
+      store.addMessage({ threadId: "t1", role: "review", content: "keep me", createdAt: 1 });
+      store.insertThread({ threadId: "t1", repo: "a/b", sha: "new", kind: "push", createdAt: 2 });
+
+      expect(store.listMessages("t1")).toHaveLength(1);
+      expect(store.listMessages("t1")[0]!.content).toBe("keep me");
+      expect(store.getThread("t1")!.sha).toBe("new");
+    });
   });
 
   describe("review_history (dedup)", () => {

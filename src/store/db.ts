@@ -18,6 +18,8 @@ export class Store {
     mkdirSync(dataDir, { recursive: true });
     this.db = new Database(join(dataDir, "codex-review.sqlite"));
     this.db.pragma("journal_mode = WAL");
+    // FK 制約を有効化。messages → threads の ON DELETE CASCADE を機能させる。
+    this.db.pragma("foreign_keys = ON");
     this.migrate();
     this.prepareStatements();
   }
@@ -49,8 +51,17 @@ export class Store {
   }
 
   private prepareStatements() {
+    // INSERT OR REPLACE は FK 有効下で既存行を DELETE するため、
+    // ON DELETE CASCADE で messages が全消失する。UPSERT で安全に更新する。
     this.stmtInsertThread = this.db.prepare(
-      "INSERT OR REPLACE INTO threads (thread_id, repo, sha, kind, number, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      `INSERT INTO threads (thread_id, repo, sha, kind, number, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(thread_id) DO UPDATE SET
+         repo = excluded.repo,
+         sha = excluded.sha,
+         kind = excluded.kind,
+         number = excluded.number,
+         created_at = excluded.created_at`,
     );
     this.stmtGetThread = this.db.prepare(
       "SELECT thread_id as threadId, repo, sha, kind, number, created_at as createdAt FROM threads WHERE thread_id = ?",
