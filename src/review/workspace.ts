@@ -21,6 +21,17 @@ export interface PrepareArgs {
   logger: Logger;
 }
 
+const REPO_RE = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
+const SHA_RE = /^[0-9a-fA-F]{40}$/;
+
+function assertRepo(value: string): void {
+  if (!REPO_RE.test(value)) throw new Error(`invalid repo format: ${value}`);
+}
+
+function assertSha(value: string): void {
+  if (!SHA_RE.test(value)) throw new Error(`invalid SHA format: ${value}`);
+}
+
 /**
  * GITHUB_TOKEN を URL やコマンドラインに露出させず、
  * git の設定用環境変数で認証ヘッダを注入する (Git 2.31+)。
@@ -41,8 +52,10 @@ function gitAuthEnv(token: string | undefined): Record<string, string> {
  */
 export async function prepareWorkspace(args: PrepareArgs): Promise<Workspace> {
   const { workspacesDir, repo, repoUrl, sha, depth, githubToken, headRepoUrl, logger } = args;
+  assertRepo(repo);
+  assertSha(sha);
   mkdirSync(workspacesDir, { recursive: true });
-  const dir = join(workspacesDir, `${repo.replace("/", "__")}-${sha.slice(0, 12)}-${Date.now()}`);
+  const dir = join(workspacesDir, `${repo.replaceAll("/", "__")}-${sha.slice(0, 12)}-${Date.now()}`);
 
   const authEnv = gitAuthEnv(githubToken);
   const execOpts = (cwd?: string) => ({
@@ -98,6 +111,9 @@ export async function getDiff(
   logger: Logger,
   githubToken?: string,
 ): Promise<string> {
+  assertSha(headSha);
+  if (baseSha) assertSha(baseSha);
+
   const authEnv = gitAuthEnv(githubToken);
   const opts = { cwd: workdir, env: { ...process.env, ...authEnv } };
 
@@ -138,29 +154,36 @@ export interface DiffFilterOpts {
 export function filterDiff(raw: string, opts: DiffFilterOpts): string {
   if (opts.includeExtensions.length === 0 && opts.excludePaths.length === 0) return raw;
 
-  // "diff --git a/..." で始まるファイル単位のハンクに分割
+  // パターンを一度だけコンパイル
+  const matchers = compilePatterns(opts.excludePaths);
+  const extSet = opts.includeExtensions.length > 0 ? new Set(opts.includeExtensions) : null;
+
   const parts = raw.split(/(?=^diff --git )/m);
   const filtered = parts.filter((part) => {
     const headerMatch = part.match(/^diff --git a\/(.+?) b\/(.+)/);
-    if (!headerMatch?.[2]) return true; // diff ヘッダでなければ保持
+    if (!headerMatch?.[2]) return true;
     const filePath = headerMatch[2];
 
-    if (opts.excludePaths.length > 0 && matchAny(filePath, opts.excludePaths)) return false;
-    if (opts.includeExtensions.length > 0) {
-      const ext = extname(filePath).replace(/^\./, "");
-      return opts.includeExtensions.includes(ext);
-    }
+    if (matchers.length > 0 && matchAny(filePath, matchers)) return false;
+    if (extSet) return extSet.has(extname(filePath).replace(/^\./, ""));
     return true;
   });
   return filtered.join("");
 }
 
-function matchAny(filePath: string, patterns: string[]): boolean {
-  return patterns.some((p) => {
+type PatternMatcher = RegExp | { literal: string };
+
+function compilePatterns(patterns: string[]): PatternMatcher[] {
+  return patterns.map((p) => {
     if (p.includes("*")) {
-      const re = new RegExp(`^${p.replace(/\./g, "\\.").replace(/\*\*/g, ".*").replace(/(?<!\.\*)\*/g, "[^/]*")}$`);
-      return re.test(filePath);
+      return new RegExp(`^${p.replace(/\./g, "\\.").replace(/\*\*/g, ".*").replace(/(?<!\.\*)\*/g, "[^/]*")}$`);
     }
-    return filePath === p || filePath.startsWith(`${p}/`);
+    return { literal: p };
   });
+}
+
+function matchAny(filePath: string, matchers: PatternMatcher[]): boolean {
+  return matchers.some((m) =>
+    m instanceof RegExp ? m.test(filePath) : filePath === m.literal || filePath.startsWith(`${m.literal}/`),
+  );
 }

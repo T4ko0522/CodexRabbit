@@ -107,8 +107,8 @@ export class DiscordBot {
     // workspace TTL を延長
     if (ctx) ctx.lastActivityAt = Date.now();
 
-    const history = store.listMessages(thread.id);
-    const prompt = buildFollowUpPrompt(record.job, history.slice(-20), content);
+    const history = store.listRecentMessages(thread.id, 20);
+    const prompt = buildFollowUpPrompt(record.job, history, content);
     const cwd = record.workspacePath ?? env.WORKSPACES_DIR;
 
     let reply: string;
@@ -122,7 +122,8 @@ export class DiscordBot {
         logger,
       });
     } catch (err) {
-      reply = `:warning: codex 実行に失敗しました。\n\`\`\`\n${(err as Error).message}\n\`\`\``;
+      logger.error({ err: (err as Error).message }, "codex follow-up failed");
+      reply = `:warning: codex 実行に失敗しました。サーバーログを確認してください。`;
     }
 
     store.addMessage({

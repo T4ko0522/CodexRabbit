@@ -66,18 +66,19 @@ export function chunkMarkdown(input: string, size: number): string[] {
   const effectiveSize = size - FENCE_RESERVE;
 
   const out: string[] = [];
-  let rest = input;
+  let offset = 0;
   let openFence: string | null = null;
-  while (rest.length > 0) {
-    const slice = rest.slice(0, effectiveSize);
+  while (offset < input.length) {
+    const remaining = input.length - offset;
+    const slice = input.slice(offset, offset + effectiveSize);
     // 改行優先で切る
     let cut = slice.length;
-    if (rest.length > effectiveSize) {
+    if (remaining > effectiveSize) {
       const nl = slice.lastIndexOf("\n");
       if (nl > effectiveSize * 0.6) cut = nl;
     }
-    let chunk = rest.slice(0, cut);
-    rest = rest.slice(cut);
+    let chunk = input.slice(offset, offset + cut);
+    offset += cut;
 
     // コードフェンスの開閉を揃える
     const fences = chunk.match(/```[^\n]*/g) ?? [];

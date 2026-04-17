@@ -1,4 +1,5 @@
 import { mkdirSync, rmSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { loadConfig } from "./config.ts";
 import { loadEnv } from "./env.ts";
 import { createLogger } from "./logger.ts";
@@ -73,12 +74,9 @@ async function main() {
     const now = Date.now();
     for (const [id, ctx] of threadContext) {
       if (now - ctx.lastActivityAt > ttlMs && ctx.workspacePath) {
-        try {
-          rmSync(ctx.workspacePath, { recursive: true, force: true });
-          logger.info({ threadId: id, age: Math.round((now - ctx.createdAt) / 60_000) }, "stale workspace cleaned");
-        } catch {
-          /* best effort */
-        }
+        rm(ctx.workspacePath, { recursive: true, force: true })
+          .then(() => logger.info({ threadId: id, age: Math.round((now - ctx.createdAt) / 60_000) }, "stale workspace cleaned"))
+          .catch(() => {/* best effort */});
         threadContext.delete(id);
       }
     }

@@ -5,12 +5,18 @@ import type { MessageRecord, ThreadRecord } from "../types.ts";
 
 export class Store {
   private db: Database.Database;
+  private stmtInsertThread!: Database.Statement;
+  private stmtGetThread!: Database.Statement;
+  private stmtAddMessage!: Database.Statement;
+  private stmtListMessages!: Database.Statement;
+  private stmtListRecentMessages!: Database.Statement;
 
   constructor(dataDir: string) {
     mkdirSync(dataDir, { recursive: true });
     this.db = new Database(join(dataDir, "codex-review.sqlite"));
     this.db.pragma("journal_mode = WAL");
     this.migrate();
+    this.prepareStatements();
   }
 
   private migrate() {
@@ -35,35 +41,42 @@ export class Store {
     `);
   }
 
+  private prepareStatements() {
+    this.stmtInsertThread = this.db.prepare(
+      "INSERT OR REPLACE INTO threads (thread_id, repo, sha, kind, number, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    );
+    this.stmtGetThread = this.db.prepare(
+      "SELECT thread_id as threadId, repo, sha, kind, number, created_at as createdAt FROM threads WHERE thread_id = ?",
+    );
+    this.stmtAddMessage = this.db.prepare(
+      "INSERT INTO messages (thread_id, role, content, created_at) VALUES (?, ?, ?, ?)",
+    );
+    this.stmtListMessages = this.db.prepare(
+      "SELECT thread_id as threadId, role, content, created_at as createdAt FROM messages WHERE thread_id = ? ORDER BY id ASC",
+    );
+    this.stmtListRecentMessages = this.db.prepare(
+      "SELECT * FROM (SELECT thread_id as threadId, role, content, created_at as createdAt FROM messages WHERE thread_id = ? ORDER BY id DESC LIMIT ?) ORDER BY createdAt ASC",
+    );
+  }
+
   insertThread(t: ThreadRecord): void {
-    this.db
-      .prepare(
-        "INSERT OR REPLACE INTO threads (thread_id, repo, sha, kind, number, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-      )
-      .run(t.threadId, t.repo, t.sha ?? null, t.kind, t.number ?? null, t.createdAt);
+    this.stmtInsertThread.run(t.threadId, t.repo, t.sha ?? null, t.kind, t.number ?? null, t.createdAt);
   }
 
   getThread(threadId: string): ThreadRecord | null {
-    const row = this.db
-      .prepare(
-        "SELECT thread_id as threadId, repo, sha, kind, number, created_at as createdAt FROM threads WHERE thread_id = ?",
-      )
-      .get(threadId) as ThreadRecord | undefined;
-    return row ?? null;
+    return (this.stmtGetThread.get(threadId) as ThreadRecord | undefined) ?? null;
   }
 
   addMessage(m: MessageRecord): void {
-    this.db
-      .prepare("INSERT INTO messages (thread_id, role, content, created_at) VALUES (?, ?, ?, ?)")
-      .run(m.threadId, m.role, m.content, m.createdAt);
+    this.stmtAddMessage.run(m.threadId, m.role, m.content, m.createdAt);
   }
 
   listMessages(threadId: string): MessageRecord[] {
-    return this.db
-      .prepare(
-        "SELECT thread_id as threadId, role, content, created_at as createdAt FROM messages WHERE thread_id = ? ORDER BY id ASC",
-      )
-      .all(threadId) as MessageRecord[];
+    return this.stmtListMessages.all(threadId) as MessageRecord[];
+  }
+
+  listRecentMessages(threadId: string, limit: number): MessageRecord[] {
+    return this.stmtListRecentMessages.all(threadId, limit) as MessageRecord[];
   }
 
   close(): void {
