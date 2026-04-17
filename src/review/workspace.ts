@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { extname, join } from "node:path";
 import { execa } from "execa";
+import picomatch from "picomatch";
 import type { Logger } from "../logger.ts";
 
 export interface Workspace {
@@ -269,28 +270,23 @@ function unescapeGitQuoted(s: string): string {
     .replace(/\\n/g, "\n");
 }
 
-type PatternMatcher = RegExp | { literal: string };
+type PatternMatcher = ((s: string) => boolean) | { literal: string };
 
 function compilePatterns(patterns: string[]): PatternMatcher[] {
   return patterns.map((p) => {
-    if (p.includes("*")) {
-      return new RegExp(
-        `^${p
-          .replace(/\./g, "\\.")
-          .replace(/\*\*/g, ".*")
-          .replace(/(?<!\.\*)\*/g, "[^/]*")}$`,
-      );
+    if (p.includes("*") || p.includes("?") || p.includes("[") || p.includes("{")) {
+      // picomatch で glob を堅牢にマッチ (** / *.ext / {a,b} などをサポート)
+      return picomatch(p, { dot: true });
     }
     return { literal: p };
   });
 }
 
 function matchAny(filePath: string, matchers: PatternMatcher[]): boolean {
-  return matchers.some((m) =>
-    m instanceof RegExp
-      ? m.test(filePath)
-      : filePath === m.literal || filePath.startsWith(`${m.literal}/`),
-  );
+  return matchers.some((m) => {
+    if (typeof m === "function") return m(filePath);
+    return filePath === m.literal || filePath.startsWith(`${m.literal}/`);
+  });
 }
 
 function cleanupWorkspace(dir: string, logger: Logger): void {
