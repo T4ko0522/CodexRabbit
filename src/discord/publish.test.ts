@@ -35,4 +35,14 @@ describe("chunkMarkdown", () => {
   it("handles empty string", () => {
     expect(chunkMarkdown("", 100)).toEqual([""]);
   });
+
+  it("never exceeds the specified size even with code fences", () => {
+    const body = Array.from({ length: 100 }, (_, i) => `line ${i}: ${"x".repeat(60)}`).join("\n");
+    const md = `\`\`\`ts\n${body}\n\`\`\``;
+    const limit = 2000;
+    const chunks = chunkMarkdown(md, limit);
+    for (const c of chunks) {
+      expect(c.length).toBeLessThanOrEqual(limit);
+    }
+  });
 });
