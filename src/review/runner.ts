@@ -122,5 +122,9 @@ async function prepareIssueWorkspace(deps: RunReviewDeps, job: ReviewJob) {
 
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
-  return `${s.slice(0, max)}\n\n... (truncated ${s.length - max} chars)`;
+  // UTF-16 サロゲートペア境界で切ると末尾が壊れるため、末尾 1 文字が high-surrogate ならもう 1 つ戻す。
+  let end = max;
+  const code = s.charCodeAt(end - 1);
+  if (code >= 0xd800 && code <= 0xdbff) end -= 1;
+  return `${s.slice(0, end)}\n\n... (truncated ${s.length - end} chars)`;
 }
