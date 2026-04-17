@@ -9,10 +9,9 @@ const baseEnv: Env = {
 	HTTP_HOST: "127.0.0.1",
 	HTTP_PORT: 3000,
 	WEBHOOK_SECRET: "test-secret-12345",
-	GITHUB_TOKEN: "",
-	GITHUB_APP_ID: "",
-	GITHUB_APP_PRIVATE_KEY_PATH: "",
-	GITHUB_APP_INSTALLATION_ID: "",
+	GITHUB_APP_ID: 123456,
+	GITHUB_APP_PRIVATE_KEY_PATH: "/nonexistent/key.pem",
+	GITHUB_APP_INSTALLATION_ID: 789,
 	DISCORD_BOT_TOKEN: "test",
 	DISCORD_CHANNEL_ID: "123",
 	CODEX_BIN: "codex",
@@ -25,16 +24,7 @@ const baseEnv: Env = {
 };
 
 describe("createGitHubClient", () => {
-	it("returns null when no credentials are set", async () => {
-		const result = await createGitHubClient(baseEnv, logger);
-		expect(result).toBeNull();
-	});
-
-	it("returns Octokit with PAT when GITHUB_TOKEN is set", async () => {
-		const env = { ...baseEnv, GITHUB_TOKEN: "ghp_test123" };
-		const result = await createGitHubClient(env, logger);
-		expect(result).not.toBeNull();
-		expect(result!.octokit).toHaveProperty("rest");
-		expect(result!.token).toBe("ghp_test123");
+	it("throws when private key file does not exist", async () => {
+		await expect(createGitHubClient(baseEnv, logger)).rejects.toThrow();
 	});
 });

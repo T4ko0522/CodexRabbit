@@ -33,16 +33,14 @@ async function main() {
     concurrency: 1,
     handle: async (job) => {
       logger.info({ repo: job.repo, kind: job.kind, number: job.number }, "review starting");
-      const result = await runReview(job, { env, config, logger, githubToken: gh?.token });
+      const result = await runReview(job, { env, config, logger, githubToken: gh.token });
 
       // GitHub フィードバック (best-effort、エラーは内部で吸収)
-      if (gh) {
-        if (config.github.prReviewComment && job.kind === "pull_request") {
-          await postPrReview(gh.octokit, job, result.markdown, logger);
-        }
-        if (config.github.pushIssueOnSevere && job.kind === "push") {
-          await createPushIssue(gh.octokit, job, result.markdown, logger);
-        }
+      if (config.github.prReviewComment && job.kind === "pull_request") {
+        await postPrReview(gh.octokit, job, result.markdown, logger);
+      }
+      if (config.github.pushIssueOnSevere && job.kind === "push") {
+        await createPushIssue(gh.octokit, job, result.markdown, logger);
       }
 
       // Discord 投稿 (既存フロー)

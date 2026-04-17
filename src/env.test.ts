@@ -29,6 +29,9 @@ describe("loadEnv", () => {
   beforeEach(() => {
     // 必須値を設定
     process.env.WEBHOOK_SECRET = "test-secret-12345";
+    process.env.GITHUB_APP_ID = "123456";
+    process.env.GITHUB_APP_PRIVATE_KEY_PATH = "/tmp/key.pem";
+    process.env.GITHUB_APP_INSTALLATION_ID = "789";
     process.env.DISCORD_BOT_TOKEN = "discord-token";
     process.env.DISCORD_CHANNEL_ID = "123456789";
   });
@@ -46,8 +49,9 @@ describe("loadEnv", () => {
     expect(env.HTTP_HOST).toBe("127.0.0.1");
     expect(env.HTTP_PORT).toBe(3000);
     expect(env.WEBHOOK_SECRET).toBe("test-secret-12345");
+    expect(env.GITHUB_APP_ID).toBe(123456);
+    expect(env.GITHUB_APP_INSTALLATION_ID).toBe(789);
     expect(env.CODEX_TIMEOUT_MS).toBe(900_000);
-    expect(env.LOG_LEVEL).toBe("info");
   });
 
   it("throws when WEBHOOK_SECRET is too short", () => {
@@ -58,6 +62,11 @@ describe("loadEnv", () => {
   it("throws when DISCORD_BOT_TOKEN is missing", () => {
     delete process.env.DISCORD_BOT_TOKEN;
     expect(() => loadEnv()).toThrow("DISCORD_BOT_TOKEN");
+  });
+
+  it("throws when GITHUB_APP_ID is missing", () => {
+    delete process.env.GITHUB_APP_ID;
+    expect(() => loadEnv()).toThrow("GITHUB_APP_ID");
   });
 
   it("coerces numeric values", () => {

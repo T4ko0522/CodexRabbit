@@ -6,12 +6,10 @@ const EnvSchema = z.object({
 
   WEBHOOK_SECRET: z.string().min(8, "WEBHOOK_SECRET must be at least 8 chars"),
 
-  GITHUB_TOKEN: z.string().optional().default(""),
-
-  // GitHub App 認証 (GITHUB_TOKEN より優先)
-  GITHUB_APP_ID: z.string().optional().default(""),
-  GITHUB_APP_PRIVATE_KEY_PATH: z.string().optional().default(""),
-  GITHUB_APP_INSTALLATION_ID: z.string().optional().default(""),
+  // GitHub App 認証 (必須)
+  GITHUB_APP_ID: z.coerce.number().int().positive("GITHUB_APP_ID is required"),
+  GITHUB_APP_PRIVATE_KEY_PATH: z.string().min(1, "GITHUB_APP_PRIVATE_KEY_PATH is required"),
+  GITHUB_APP_INSTALLATION_ID: z.coerce.number().int().positive("GITHUB_APP_INSTALLATION_ID is required"),
 
   DISCORD_BOT_TOKEN: z.string().min(1, "DISCORD_BOT_TOKEN is required"),
   DISCORD_CHANNEL_ID: z.string().min(1, "DISCORD_CHANNEL_ID is required"),

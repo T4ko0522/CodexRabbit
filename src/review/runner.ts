@@ -18,7 +18,7 @@ export interface RunReviewDeps {
   env: Env;
   config: AppConfig;
   logger: Logger;
-  /** clone/fetch 用 GitHub トークン (App Installation Token or PAT) */
+  /** clone/fetch 用 GitHub App Installation Token */
   githubToken?: string;
 }
 

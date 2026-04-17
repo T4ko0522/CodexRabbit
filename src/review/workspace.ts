@@ -33,7 +33,7 @@ function assertSha(value: string): void {
 }
 
 /**
- * GITHUB_TOKEN を URL やコマンドラインに露出させず、
+ * トークンを URL やコマンドラインに露出させず、
  * git の設定用環境変数で認証ヘッダを注入する (Git 2.31+)。
  */
 function gitAuthEnv(token: string | undefined): Record<string, string> {
