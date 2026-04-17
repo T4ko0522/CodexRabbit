@@ -112,7 +112,7 @@ async function main() {
     logger.info({ signal }, "shutting down");
     clearInterval(sweepTimer);
     await server.close();
-    await queue.drain();
+    await queue.drain(env.SHUTDOWN_TIMEOUT_MS);
     await bot.stop();
     store.close();
     cleanupAll();
