@@ -44,6 +44,12 @@ export interface ThreadRecord {
   kind: EventKind;
   number?: number;
   createdAt: number;
+  /**
+   * 作成時点の ReviewJob を丸ごと保持する。
+   * 再起動後の follow-up で action/htmlUrl/title/baseSha 等を復元するのに使う。
+   * 既存行 (マイグレーション前) が読まれたときは undefined。
+   */
+  job?: ReviewJob;
 }
 
 export interface MessageRecord {

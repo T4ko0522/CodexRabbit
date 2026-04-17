@@ -70,6 +70,40 @@ describe("Store", () => {
       expect(t!.sha).toBeNull();
       expect(t!.number).toBe(42);
     });
+
+    it("persists and restores the full ReviewJob via job field", () => {
+      const job = {
+        kind: "pull_request" as const,
+        repo: "acme/app",
+        repoUrl: "https://github.com/acme/app",
+        sha: "abc",
+        baseSha: "def",
+        headRepoUrl: "https://github.com/forker/app",
+        title: "PR title",
+        htmlUrl: "https://github.com/acme/app/pull/7",
+        sender: "alice",
+        number: 7,
+        action: "opened",
+        body: "PR body",
+      };
+      store.insertThread({
+        threadId: "t3",
+        repo: job.repo,
+        sha: job.sha,
+        kind: job.kind,
+        number: job.number,
+        createdAt: 1,
+        job,
+      });
+      const t = store.getThread("t3");
+      expect(t!.job).toEqual(job);
+    });
+
+    it("returns job=undefined when no job was persisted", () => {
+      store.insertThread({ threadId: "t4", repo: "a/b", kind: "push", createdAt: 1 });
+      const t = store.getThread("t4");
+      expect(t!.job).toBeUndefined();
+    });
   });
 
   describe("messages", () => {

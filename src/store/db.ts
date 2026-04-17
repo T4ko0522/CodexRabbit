@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import Database from "better-sqlite3";
-import type { MessageRecord, ThreadRecord } from "../types.ts";
+import type { MessageRecord, ReviewJob, ThreadRecord } from "../types.ts";
 
 export class Store {
   private db: Database.Database;
@@ -48,23 +48,31 @@ export class Store {
         created_at INTEGER NOT NULL
       );
     `);
+    // ReviewJob を JSON で永続化する列。既存 DB との互換のため追加式マイグレーション。
+    const hasJobJson = (
+      this.db.prepare("PRAGMA table_info(threads)").all() as Array<{ name: string }>
+    ).some((c) => c.name === "job_json");
+    if (!hasJobJson) {
+      this.db.exec("ALTER TABLE threads ADD COLUMN job_json TEXT");
+    }
   }
 
   private prepareStatements() {
     // INSERT OR REPLACE は FK 有効下で既存行を DELETE するため、
     // ON DELETE CASCADE で messages が全消失する。UPSERT で安全に更新する。
     this.stmtInsertThread = this.db.prepare(
-      `INSERT INTO threads (thread_id, repo, sha, kind, number, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO threads (thread_id, repo, sha, kind, number, created_at, job_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(thread_id) DO UPDATE SET
          repo = excluded.repo,
          sha = excluded.sha,
          kind = excluded.kind,
          number = excluded.number,
-         created_at = excluded.created_at`,
+         created_at = excluded.created_at,
+         job_json = excluded.job_json`,
     );
     this.stmtGetThread = this.db.prepare(
-      "SELECT thread_id as threadId, repo, sha, kind, number, created_at as createdAt FROM threads WHERE thread_id = ?",
+      "SELECT thread_id as threadId, repo, sha, kind, number, created_at as createdAt, job_json as jobJson FROM threads WHERE thread_id = ?",
     );
     this.stmtAddMessage = this.db.prepare(
       "INSERT INTO messages (thread_id, role, content, created_at) VALUES (?, ?, ?, ?)",
@@ -90,11 +98,28 @@ export class Store {
       t.kind,
       t.number ?? null,
       t.createdAt,
+      t.job ? JSON.stringify(t.job) : null,
     );
   }
 
   getThread(threadId: string): ThreadRecord | null {
-    return (this.stmtGetThread.get(threadId) as ThreadRecord | undefined) ?? null;
+    const row = this.stmtGetThread.get(threadId) as
+      | (Omit<ThreadRecord, "job"> & { jobJson: string | null })
+      | undefined;
+    if (!row) return null;
+    const { jobJson, ...rest } = row;
+    return { ...rest, job: jobJson ? (this.safeParseJob(jobJson, threadId) ?? undefined) : undefined };
+  }
+
+  private safeParseJob(json: string, threadId: string): ReviewJob | null {
+    try {
+      return JSON.parse(json) as ReviewJob;
+    } catch {
+      // 手動編集や旧バージョン由来の壊れた JSON は無視して reconstruction にフォールバック
+      // eslint-disable-next-line no-console
+      console.warn(`threads.job_json parse failed for ${threadId}`);
+      return null;
+    }
   }
 
   addMessage(m: MessageRecord): void {

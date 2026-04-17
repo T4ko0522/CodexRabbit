@@ -67,6 +67,7 @@ export class DiscordBot {
       kind: job.kind,
       number: job.number,
       createdAt: Date.now(),
+      job,
     });
     this.deps.store.addMessage({
       threadId: thread.id,
@@ -100,7 +101,10 @@ export class DiscordBot {
       ctx ??
       (() => {
         const r = store.getThread(thread.id);
-        return r ? { job: this.recreateJobFromRecord(r), workspacePath: undefined } : null;
+        if (!r) return null;
+        // 永続化された ReviewJob があればそれを優先 (action/htmlUrl/title などを保持)
+        const job = r.job ?? this.recreateJobFromRecord(r);
+        return { job, workspacePath: undefined };
       })();
     if (!record) return; // このスレッドは管理対象外
 
