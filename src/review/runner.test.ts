@@ -28,6 +28,7 @@ const config: AppConfig = {
   review: { maxDiffChars: 200_000, cloneDepth: 50, includeExtensions: [], excludePaths: [] },
   github: { prReviewComment: true, pushIssueOnSevere: true },
   discord: { chunkSize: 1900, threadAutoArchiveMinutes: 1440, enableThreadChat: true },
+  workspace: { ttlMinutes: 1440 },
 };
 
 const issueJob: ReviewJob = {

@@ -62,6 +62,14 @@ const ConfigSchema = z.object({
       threadAutoArchiveMinutes: 1440,
       enableThreadChat: true,
     }),
+
+  workspace: z
+    .object({
+      // スレッド対話終了後に残留する clone ディレクトリを回収するまでの猶予 (分)。
+      // Discord のスレッド自動アーカイブ時間とは独立。
+      ttlMinutes: z.number().int().positive().default(1440),
+    })
+    .default({ ttlMinutes: 1440 }),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;

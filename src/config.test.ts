@@ -85,4 +85,26 @@ describe("loadConfig", () => {
     writeFileSync(file, "discord:\n  chunkSize: 3000\n");
     expect(() => loadConfig(file)).toThrow();
   });
+
+  it("applies default workspace.ttlMinutes", () => {
+    const cfg = loadConfig(join(tmpDir, "nonexistent.yml"));
+    expect(cfg.workspace.ttlMinutes).toBe(1440);
+  });
+
+  it("accepts custom workspace.ttlMinutes independent of discord settings", () => {
+    const file = join(tmpDir, "ws.yml");
+    writeFileSync(
+      file,
+      "workspace:\n  ttlMinutes: 30\ndiscord:\n  threadAutoArchiveMinutes: 4320\n",
+    );
+    const cfg = loadConfig(file);
+    expect(cfg.workspace.ttlMinutes).toBe(30);
+    expect(cfg.discord.threadAutoArchiveMinutes).toBe(4320);
+  });
+
+  it("rejects non-positive workspace.ttlMinutes", () => {
+    const file = join(tmpDir, "bad-ttl.yml");
+    writeFileSync(file, "workspace:\n  ttlMinutes: 0\n");
+    expect(() => loadConfig(file)).toThrow();
+  });
 });

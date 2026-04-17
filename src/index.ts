@@ -72,8 +72,8 @@ async function main() {
     tryRegisterReview: (key) => store.tryRegisterReview(key),
   });
 
-  // workspace TTL: threadAutoArchiveMinutes を TTL として再利用し、定期スイープで回収
-  const ttlMs = config.discord.threadAutoArchiveMinutes * 60 * 1000;
+  // workspace TTL: 非活性スレッドに紐づく clone ディレクトリを定期スイープで回収
+  const ttlMs = config.workspace.ttlMinutes * 60 * 1000;
   const SWEEP_INTERVAL_MS = 10 * 60 * 1000; // 10 分ごとにチェック
   const sweepTimer = setInterval(() => {
     const now = Date.now();
