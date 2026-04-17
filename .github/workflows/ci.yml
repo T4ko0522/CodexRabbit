@@ -36,4 +36,5 @@ jobs:
           node-version-file: package.json
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm rebuild better-sqlite3
       - run: pnpm test
