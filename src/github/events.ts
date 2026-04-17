@@ -1,10 +1,18 @@
 import type { IncomingWebhook, ReviewJob } from "../types.ts";
 
+export interface BuildJobOptions {
+  /** PR/Issue コメントでの mention 検知に使うトリガ文字列 */
+  mentionTriggers?: readonly string[];
+}
+
 /**
  * GitHub raw payload から ReviewJob を組み立てる。
- * 対象外アクション (closed PR など) は null を返す。
+ * 対象外アクション (closed PR など) や mention 未一致の issue_comment は null を返す。
  */
-export function buildJobFromPayload(input: IncomingWebhook): ReviewJob | null {
+export function buildJobFromPayload(
+  input: IncomingWebhook,
+  opts: BuildJobOptions = {},
+): ReviewJob | null {
   const { event, repository, sender, payload } = input;
   const repoUrl = `https://github.com/${repository}`;
 
@@ -27,6 +35,7 @@ export function buildJobFromPayload(input: IncomingWebhook): ReviewJob | null {
       htmlUrl: payload.compare ?? repoUrl,
       sender: sender || payload.pusher?.name || payload.sender?.login || "unknown",
       summary,
+      triggeredBy: "auto",
     };
   }
 
@@ -57,6 +66,7 @@ export function buildJobFromPayload(input: IncomingWebhook): ReviewJob | null {
       body: pr.body ?? "",
       action,
       isDraft: Boolean(pr.draft),
+      triggeredBy: "auto",
     };
   }
 
@@ -76,6 +86,57 @@ export function buildJobFromPayload(input: IncomingWebhook): ReviewJob | null {
       number: issue.number,
       body: issue.body ?? "",
       action,
+      triggeredBy: "auto",
+    };
+  }
+
+  if (event === "issue_comment") {
+    const triggers = opts.mentionTriggers ?? [];
+    if (triggers.length === 0) return null;
+    const action = payload.action as string | undefined;
+    if (action !== "created" && action !== "edited") return null;
+    const comment = payload.comment;
+    const issue = payload.issue;
+    if (!comment || !issue) return null;
+    const body = String(comment.body ?? "");
+    if (!triggers.some((t) => body.includes(t))) return null;
+    const commentId = typeof comment.id === "number" ? comment.id : undefined;
+    const commentUrl = typeof comment.html_url === "string" ? comment.html_url : undefined;
+    const commenter = sender || comment.user?.login || "unknown";
+    const isPr = Boolean(issue.pull_request);
+
+    if (isPr) {
+      // PR の sha/baseSha は issue_comment payload に含まれない。
+      // server 側で octokit.pulls.get を呼んで補完する。
+      return {
+        kind: "pull_request",
+        repo: repository,
+        repoUrl,
+        title: `PR #${issue.number} ${issue.title} [mention]`,
+        htmlUrl: issue.html_url ?? `${repoUrl}/pull/${issue.number}`,
+        sender: commenter,
+        number: issue.number,
+        body: issue.body ?? "",
+        action: "mention",
+        triggeredBy: "mention",
+        commentId,
+        commentUrl,
+      };
+    }
+
+    return {
+      kind: "issues",
+      repo: repository,
+      repoUrl,
+      title: `Issue #${issue.number} ${issue.title} [mention]`,
+      htmlUrl: issue.html_url ?? `${repoUrl}/issues/${issue.number}`,
+      sender: commenter,
+      number: issue.number,
+      body: issue.body ?? "",
+      action: "mention",
+      triggeredBy: "mention",
+      commentId,
+      commentUrl,
     };
   }
 

@@ -71,6 +71,7 @@ describe("buildJobFromPayload - pull_request", () => {
     expect(job?.baseRef).toBe("main");
     expect(job?.isDraft).toBe(false);
     expect(job?.action).toBe("opened");
+    expect(job?.triggeredBy).toBe("auto");
   });
 
   it("flags draft PR", () => {
@@ -137,5 +138,134 @@ describe("buildJobFromPayload - issues", () => {
       payload: { action: "labeled", issue: { number: 1, title: "x" } },
     });
     expect(job).toBeNull();
+  });
+});
+
+describe("buildJobFromPayload - issue_comment", () => {
+  const prCommentPayload = {
+    action: "created",
+    comment: {
+      id: 9999,
+      body: "re-review please @CodexRabbit[bot]",
+      html_url: "https://github.com/acme/widget/pull/42#issuecomment-9999",
+      user: { login: "bob" },
+    },
+    issue: {
+      number: 42,
+      title: "Refactor auth",
+      body: "desc",
+      html_url: "https://github.com/acme/widget/pull/42",
+      pull_request: { url: "https://api.github.com/acme/widget/pulls/42" },
+    },
+  };
+
+  const issueCommentPayload = {
+    action: "created",
+    comment: {
+      id: 7777,
+      body: "please triage @CodexRabbit[bot]",
+      html_url: "https://github.com/acme/widget/issues/7#issuecomment-7777",
+      user: { login: "carol" },
+    },
+    issue: {
+      number: 7,
+      title: "Bug",
+      body: "steps",
+      html_url: "https://github.com/acme/widget/issues/7",
+    },
+  };
+
+  it("returns null when triggers are empty", () => {
+    const job = buildJobFromPayload(
+      {
+        event: "issue_comment",
+        repository: "acme/widget",
+        sender: "bob",
+        payload: prCommentPayload,
+      },
+      { mentionTriggers: [] },
+    );
+    expect(job).toBeNull();
+  });
+
+  it("returns null when comment body does not contain any trigger", () => {
+    const job = buildJobFromPayload(
+      {
+        event: "issue_comment",
+        repository: "acme/widget",
+        sender: "bob",
+        payload: {
+          ...prCommentPayload,
+          comment: { ...prCommentPayload.comment, body: "just a note" },
+        },
+      },
+      { mentionTriggers: ["@CodexRabbit[bot]"] },
+    );
+    expect(job).toBeNull();
+  });
+
+  it("skips unsupported comment actions", () => {
+    const job = buildJobFromPayload(
+      {
+        event: "issue_comment",
+        repository: "acme/widget",
+        sender: "bob",
+        payload: { ...prCommentPayload, action: "deleted" },
+      },
+      { mentionTriggers: ["@CodexRabbit[bot]"] },
+    );
+    expect(job).toBeNull();
+  });
+
+  it("builds a pull_request job from PR comment mention", () => {
+    const job = buildJobFromPayload(
+      {
+        event: "issue_comment",
+        repository: "acme/widget",
+        sender: "bob",
+        payload: prCommentPayload,
+      },
+      { mentionTriggers: ["@CodexRabbit[bot]"] },
+    );
+    expect(job?.kind).toBe("pull_request");
+    expect(job?.number).toBe(42);
+    expect(job?.triggeredBy).toBe("mention");
+    expect(job?.commentId).toBe(9999);
+    expect(job?.action).toBe("mention");
+    // sha/baseSha は payload に無いため server 側で補完される
+    expect(job?.sha).toBeUndefined();
+  });
+
+  it("builds an issues job from Issue comment mention", () => {
+    const job = buildJobFromPayload(
+      {
+        event: "issue_comment",
+        repository: "acme/widget",
+        sender: "carol",
+        payload: issueCommentPayload,
+      },
+      { mentionTriggers: ["@CodexRabbit[bot]"] },
+    );
+    expect(job?.kind).toBe("issues");
+    expect(job?.number).toBe(7);
+    expect(job?.triggeredBy).toBe("mention");
+    expect(job?.commentId).toBe(7777);
+  });
+
+  it("matches any of multiple triggers", () => {
+    const job = buildJobFromPayload(
+      {
+        event: "issue_comment",
+        repository: "acme/widget",
+        sender: "carol",
+        payload: {
+          ...issueCommentPayload,
+          comment: { ...issueCommentPayload.comment, body: "hey /review please" },
+        },
+      },
+      { mentionTriggers: ["@CodexRabbit[bot]", "/review"] },
+    );
+    expect(job?.kind).toBe("issues");
+    expect(job?.triggeredBy).toBe("mention");
   });
 });
