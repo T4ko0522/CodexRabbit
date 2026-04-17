@@ -3,7 +3,7 @@ import type { Message, TextChannel, ThreadChannel } from "discord.js";
 import type { AppConfig } from "../config.ts";
 import type { Env } from "../env.ts";
 import type { Logger } from "../logger.ts";
-import type { ReviewJob } from "../types.ts";
+import type { ReviewJob, ThreadContext } from "../types.ts";
 import { splitArgs } from "../env.ts";
 import { runCodex } from "../review/codex.ts";
 import { buildFollowUpPrompt } from "../review/prompt.ts";
@@ -16,7 +16,7 @@ export interface BotDeps {
   logger: Logger;
   store: Store;
   /** スレッド ID → 継続レビューに必要な情報 */
-  threadContext: Map<string, { job: ReviewJob; workspacePath?: string }>;
+  threadContext: Map<string, ThreadContext>;
 }
 
 export class DiscordBot {
@@ -73,7 +73,7 @@ export class DiscordBot {
       content: markdown,
       createdAt: Date.now(),
     });
-    this.deps.threadContext.set(thread.id, { job, workspacePath });
+    this.deps.threadContext.set(thread.id, { job, workspacePath, createdAt: Date.now() });
     return thread;
   }
 

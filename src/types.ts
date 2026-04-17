@@ -52,3 +52,10 @@ export interface MessageRecord {
   content: string;
   createdAt: number;
 }
+
+/** スレッドに紐付くレビューコンテキスト (workspace 保持用) */
+export interface ThreadContext {
+  job: ReviewJob;
+  workspacePath?: string;
+  createdAt: number;
+}
