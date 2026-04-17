@@ -1,4 +1,4 @@
-# CodexRabbit
+# Codex Rabbit
 
 GitHub の push / pull_request / issues / issue_comment を契機に **Codex CLI** でコードレビューを実行し、**GitHub** (PR コメント / コミットコメント / Issue 自動作成) と **Discord** (スレッド投稿 + 対話) の両方にフィードバックする Bot です。
 
