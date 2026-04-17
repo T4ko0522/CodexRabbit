@@ -5,7 +5,12 @@ import { loadEnv } from "./env.ts";
 import { createLogger } from "./logger.ts";
 import { DiscordBot, type DiscordEnv } from "./discord/bot.ts";
 import { createGitHubClient } from "./github/client.ts";
-import { createPushIssue, postCommitComment, postPrReview } from "./github/feedback.ts";
+import {
+  createPushIssue,
+  postCommitComment,
+  postIssueComment,
+  postPrReview,
+} from "./github/feedback.ts";
 import { startServer } from "./http/server.ts";
 import { JobQueue } from "./queue/queue.ts";
 import { buildDedupKey } from "./review/dedup.ts";
@@ -65,6 +70,9 @@ async function main() {
           if (config.github.pushIssueOnSevere) {
             await createPushIssue(gh.octokit, job, result.markdown, logger);
           }
+        }
+        if (job.kind === "issues") {
+          await postIssueComment(gh.octokit, job, result.markdown, logger);
         }
 
         // Discord 投稿

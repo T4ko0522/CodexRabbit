@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import pino from "pino";
-import { createPushIssue, hasSevereFindings, postCommitComment, postPrReview } from "./feedback.ts";
+import {
+  createPushIssue,
+  hasSevereFindings,
+  postCommitComment,
+  postIssueComment,
+  postPrReview,
+} from "./feedback.ts";
 import type { ReviewJob } from "../types.ts";
 
 const logger = pino({ level: "silent" });
@@ -196,6 +202,66 @@ describe("postCommitComment", () => {
     const longBody = "x".repeat(65_000);
     await postCommitComment(octokit, makePushJob(), longBody, logger);
     const call = createCommitComment.mock.calls[0]![0];
+    expect(Buffer.byteLength(call.body, "utf8")).toBeLessThanOrEqual(60_000);
+    expect(call.body).toContain("truncated");
+  });
+});
+
+const makeIssueJob = (): ReviewJob => ({
+  kind: "issues",
+  repo: "acme/app",
+  repoUrl: "https://github.com/acme/app",
+  title: "Issue #10 test",
+  htmlUrl: "https://github.com/acme/app/issues/10",
+  sender: "bob",
+  number: 10,
+});
+
+describe("postIssueComment", () => {
+  it("skips when job kind is not issues", async () => {
+    const createComment = vi.fn();
+    const octokit = { rest: { issues: { createComment } } } as any;
+    await postIssueComment(octokit, makePrJob(), "review", logger);
+    expect(createComment).not.toHaveBeenCalled();
+  });
+
+  it("skips when number is missing", async () => {
+    const createComment = vi.fn();
+    const octokit = { rest: { issues: { createComment } } } as any;
+    const job = { ...makeIssueJob(), number: undefined };
+    await postIssueComment(octokit, job, "review", logger);
+    expect(createComment).not.toHaveBeenCalled();
+  });
+
+  it("calls createComment for valid issue job", async () => {
+    const createComment = vi.fn().mockResolvedValue({});
+    const octokit = { rest: { issues: { createComment } } } as any;
+    await postIssueComment(octokit, makeIssueJob(), "## review\nLGTM", logger);
+    expect(createComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        owner: "acme",
+        repo: "app",
+        issue_number: 10,
+      }),
+    );
+    const call = createComment.mock.calls[0]![0];
+    expect(call.body).toContain("LGTM");
+  });
+
+  it("does not throw on API error", async () => {
+    const createComment = vi.fn().mockRejectedValue(new Error("API error"));
+    const octokit = { rest: { issues: { createComment } } } as any;
+    await expect(
+      postIssueComment(octokit, makeIssueJob(), "review", logger),
+    ).resolves.toBeUndefined();
+  });
+
+  it("truncates body exceeding 60k bytes", async () => {
+    const createComment = vi.fn().mockResolvedValue({});
+    const octokit = { rest: { issues: { createComment } } } as any;
+    const longBody = "x".repeat(65_000);
+    await postIssueComment(octokit, makeIssueJob(), longBody, logger);
+    const call = createComment.mock.calls[0]![0];
     expect(Buffer.byteLength(call.body, "utf8")).toBeLessThanOrEqual(60_000);
     expect(call.body).toContain("truncated");
   });

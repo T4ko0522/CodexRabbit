@@ -128,6 +128,33 @@ export async function postCommitComment(
 }
 
 /**
+ * Issue にレビュー結果をコメントとして投稿する (best-effort)。
+ */
+export async function postIssueComment(
+  octokit: Octokit,
+  job: ReviewJob,
+  markdown: string,
+  logger: Logger,
+): Promise<void> {
+  if (job.kind !== "issues" || !job.number) return;
+  const { owner, repo } = splitRepo(job.repo);
+  try {
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: job.number,
+      body: safeBody(markdown),
+    });
+    logger.info({ repo: job.repo, issue: job.number }, "issue comment posted");
+  } catch (err) {
+    logger.error(
+      { err: (err as Error).message, issue: job.number },
+      "failed to post issue comment",
+    );
+  }
+}
+
+/**
  * push レビューで Critical/High が検出された場合に Issue を作成する (best-effort)。
  */
 export async function createPushIssue(
