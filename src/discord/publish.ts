@@ -57,19 +57,24 @@ function buildThreadName(job: ReviewJob): string {
 /**
  * Markdown を Discord の文字数制限で分割する。
  * コードブロックは境界で閉じ直して次チャンクの冒頭で再度開く。
+ * フェンス再開閉分 (最大 ~20 文字) を予約して、最終サイズが size を超えないようにする。
  */
 export function chunkMarkdown(input: string, size: number): string[] {
   if (input.length <= size) return [input];
+  // フェンス挿入による膨張を防ぐ予約幅: "```lang\n" (先頭) + "\n```" (末尾)
+  const FENCE_RESERVE = 20;
+  const effectiveSize = size - FENCE_RESERVE;
+
   const out: string[] = [];
   let rest = input;
   let openFence: string | null = null;
   while (rest.length > 0) {
-    const slice = rest.slice(0, size);
+    const slice = rest.slice(0, effectiveSize);
     // 改行優先で切る
     let cut = slice.length;
-    if (rest.length > size) {
+    if (rest.length > effectiveSize) {
       const nl = slice.lastIndexOf("\n");
-      if (nl > size * 0.6) cut = nl;
+      if (nl > effectiveSize * 0.6) cut = nl;
     }
     let chunk = rest.slice(0, cut);
     rest = rest.slice(cut);

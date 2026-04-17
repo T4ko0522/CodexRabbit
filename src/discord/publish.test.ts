@@ -13,7 +13,7 @@ describe("chunkMarkdown", () => {
     const full = lines.join("\n");
     const chunks = chunkMarkdown(full, 200);
     expect(chunks.length).toBeGreaterThan(1);
-    for (const c of chunks) expect(c.length).toBeLessThanOrEqual(220); // some slack for code fence injection
+    for (const c of chunks) expect(c.length).toBeLessThanOrEqual(200);
   });
 
   it("closes and reopens code fences across chunks", () => {
