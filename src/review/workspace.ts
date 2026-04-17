@@ -72,7 +72,11 @@ export async function cloneRepoAtDefaultBranch(args: CloneDefaultBranchArgs): Pr
   const { workspacesDir, repo, repoUrl, depth, githubToken, logger } = args;
   assertRepo(repo);
   mkdirSync(workspacesDir, { recursive: true });
-  const dir = join(workspacesDir, `${repo.replaceAll("/", "__")}-default-${Date.now()}`);
+  // 同ミリ秒で複数ジョブが到来してもディレクトリが衝突しないよう mkdtempSync で一意性を担保する。
+  // git clone は空ディレクトリ上では失敗するため、作成後に削除してからパス名のみを使う。
+  const holder = mkdtempSync(join(workspacesDir, `${repo.replaceAll("/", "__")}-default-`));
+  rmSync(holder, { recursive: true, force: true });
+  const dir = holder;
 
   const authEnv = gitAuthEnv(githubToken);
   const cloneArgs = ["clone", "--quiet", "--filter=blob:none"];
@@ -119,10 +123,12 @@ export async function prepareWorkspace(args: PrepareArgs): Promise<Workspace> {
   assertRepo(repo);
   assertSha(sha);
   mkdirSync(workspacesDir, { recursive: true });
-  const dir = join(
-    workspacesDir,
-    `${repo.replaceAll("/", "__")}-${sha.slice(0, 12)}-${Date.now()}`,
+  // 同ミリ秒での衝突を避けるため mkdtempSync で一意名を確保してから git clone 先として使う。
+  const holder = mkdtempSync(
+    join(workspacesDir, `${repo.replaceAll("/", "__")}-${sha.slice(0, 12)}-`),
   );
+  rmSync(holder, { recursive: true, force: true });
+  const dir = holder;
 
   const authEnv = gitAuthEnv(githubToken);
   const execOpts = (cwd?: string) => ({
