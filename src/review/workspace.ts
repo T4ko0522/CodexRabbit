@@ -231,15 +231,42 @@ export function filterDiff(raw: string, opts: DiffFilterOpts): string {
 
   const parts = raw.split(/(?=^diff --git )/m);
   const filtered = parts.filter((part) => {
-    const headerMatch = part.match(/^diff --git a\/(.+?) b\/(.+)/);
-    if (!headerMatch?.[2]) return true;
-    const filePath = headerMatch[2];
+    const filePath = parseDiffHeaderPath(part);
+    if (!filePath) return true;
 
     if (matchers.length > 0 && matchAny(filePath, matchers)) return false;
     if (extSet) return extSet.has(extname(filePath).replace(/^\./, ""));
     return true;
   });
   return filtered.join("");
+}
+
+/**
+ * `diff --git` ヘッダから b 側のファイル名を抽出する。
+ * 通常は `a/foo b/bar`、スペース等を含む場合は `"a/foo" "b/bar"` でクォートされる。
+ * クォート内は \\t / \\n / \\\\ / \\" 等の C-escape も使われる。
+ */
+function parseDiffHeaderPath(part: string): string | null {
+  // 1. クォート付き両端: diff --git "a/…" "b/…"
+  const quoted = part.match(/^diff --git "a\/((?:\\.|[^"\\])*)" "b\/((?:\\.|[^"\\])*)"/);
+  if (quoted?.[2]) return unescapeGitQuoted(quoted[2]);
+  // 2. b 側のみクォート: diff --git a/… "b/…"
+  const bQuoted = part.match(/^diff --git a\/\S+ "b\/((?:\\.|[^"\\])*)"/);
+  if (bQuoted?.[1]) return unescapeGitQuoted(bQuoted[1]);
+  // 3. 通常 (スペースなし)
+  const plain = part.match(/^diff --git a\/(\S+) b\/(\S+)/);
+  if (plain?.[2]) return plain[2];
+  return null;
+}
+
+function unescapeGitQuoted(s: string): string {
+  // git が出すクォート内エスケープを概ね復元する (制御文字までは完全復元しないが、
+  // フィルタ判定に使うパス文字列として十分な程度にする)。
+  return s
+    .replace(/\\\\/g, "\\")
+    .replace(/\\"/g, '"')
+    .replace(/\\t/g, "\t")
+    .replace(/\\n/g, "\n");
 }
 
 type PatternMatcher = RegExp | { literal: string };

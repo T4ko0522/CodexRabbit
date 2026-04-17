@@ -130,4 +130,45 @@ describe("filterDiff", () => {
     });
     expect(result).toBe("");
   });
+
+  it("handles quoted filenames (with spaces) for exclusion", () => {
+    const diff = [
+      'diff --git "a/docs/my file.md" "b/docs/my file.md"',
+      '--- "a/docs/my file.md"',
+      '+++ "b/docs/my file.md"',
+      "@@ -1 +1 @@",
+      "-old",
+      "+new",
+      "diff --git a/src/index.ts b/src/index.ts",
+      "--- a/src/index.ts",
+      "+++ b/src/index.ts",
+      "@@ -1 +1 @@",
+      "-old",
+      "+new",
+    ].join("\n");
+
+    const result = filterDiff(diff, {
+      includeExtensions: [],
+      excludePaths: ["docs/**"],
+    });
+    expect(result).toContain("src/index.ts");
+    expect(result).not.toContain("my file.md");
+  });
+
+  it("filters quoted filenames by includeExtensions", () => {
+    const diff = [
+      'diff --git "a/notes 1.md" "b/notes 1.md"',
+      "@@ -1 +1 @@",
+      "-x",
+      "+y",
+      "diff --git a/src/index.ts b/src/index.ts",
+      "@@ -1 +1 @@",
+      "-a",
+      "+b",
+    ].join("\n");
+
+    const result = filterDiff(diff, { includeExtensions: ["ts"], excludePaths: [] });
+    expect(result).toContain("src/index.ts");
+    expect(result).not.toContain("notes 1.md");
+  });
 });
