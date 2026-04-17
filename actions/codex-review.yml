@@ -8,7 +8,9 @@ name: codex-review-notify
 on:
   push:
     branches: ["**"]
-  pull_request:
+  # pull_request_target: fork PR でも secrets にアクセスでき webhook を送信できる。
+  # ワークフロー自体はコード実行を行わない (webhook 送信のみ) ため安全。
+  pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, edited]
   issues:
     types: [opened, edited, reopened]

@@ -21,6 +21,8 @@ export interface ReviewJob {
   /** push: ref / PR: pull_request.head.ref */
   ref?: string;
   baseRef?: string;
+  /** fork PR の場合、head 側リポジトリの clone URL */
+  headRepoUrl?: string;
   title: string;
   htmlUrl: string;
   sender: string;

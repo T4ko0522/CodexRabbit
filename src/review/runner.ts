@@ -51,6 +51,7 @@ export async function runReview(job: ReviewJob, deps: RunReviewDeps): Promise<Re
     sha: job.sha,
     depth: config.review.cloneDepth,
     githubToken: env.GITHUB_TOKEN || undefined,
+    headRepoUrl: job.headRepoUrl,
     logger,
   });
 

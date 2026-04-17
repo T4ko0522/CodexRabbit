@@ -16,6 +16,8 @@ export interface PrepareArgs {
   /** clone の shallow depth。0 以下で full clone */
   depth: number;
   githubToken?: string;
+  /** fork PR の場合、head 側リポジトリの URL */
+  headRepoUrl?: string;
   logger: Logger;
 }
 
@@ -38,7 +40,7 @@ function gitAuthEnv(token: string | undefined): Record<string, string> {
  * shallow clone → fetch sha → checkout の順で行う。
  */
 export async function prepareWorkspace(args: PrepareArgs): Promise<Workspace> {
-  const { workspacesDir, repo, repoUrl, sha, depth, githubToken, logger } = args;
+  const { workspacesDir, repo, repoUrl, sha, depth, githubToken, headRepoUrl, logger } = args;
   mkdirSync(workspacesDir, { recursive: true });
   const dir = join(workspacesDir, `${repo.replace("/", "__")}-${sha.slice(0, 12)}-${Date.now()}`);
 
@@ -49,6 +51,7 @@ export async function prepareWorkspace(args: PrepareArgs): Promise<Workspace> {
     ...(cwd ? { cwd } : {}),
   });
 
+  // base repo を clone
   const cloneArgs = ["clone", "--quiet", "--filter=blob:none"];
   if (depth > 0) cloneArgs.push(`--depth=${depth}`);
   cloneArgs.push(repoUrl, dir);
@@ -56,14 +59,26 @@ export async function prepareWorkspace(args: PrepareArgs): Promise<Workspace> {
   logger.debug({ dir, depth }, "git clone");
   await execa("git", cloneArgs, execOpts());
 
-  try {
-    await execa("git", ["fetch", "--quiet", "--depth=200", "origin", sha], execOpts(dir));
-  } catch (err) {
-    logger.debug(
-      { err: (err as Error).message },
-      "fetch sha failed, continuing with default branch",
-    );
+  // fork PR: head repo をリモートとして追加し、SHA を fetch
+  if (headRepoUrl) {
+    logger.debug({ headRepoUrl }, "adding fork remote");
+    await execa("git", ["remote", "add", "fork", headRepoUrl], execOpts(dir));
+    try {
+      await execa("git", ["fetch", "--quiet", "--depth=200", "fork", sha], execOpts(dir));
+    } catch (err) {
+      logger.warn({ err: (err as Error).message }, "fork fetch failed");
+    }
+  } else {
+    try {
+      await execa("git", ["fetch", "--quiet", "--depth=200", "origin", sha], execOpts(dir));
+    } catch (err) {
+      logger.debug(
+        { err: (err as Error).message },
+        "fetch sha failed, continuing with default branch",
+      );
+    }
   }
+
   try {
     await execa("git", ["checkout", "--quiet", sha], execOpts(dir));
   } catch (err) {
