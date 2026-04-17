@@ -54,7 +54,7 @@ export async function runReview(job: ReviewJob, deps: RunReviewDeps): Promise<Re
     logger,
   });
 
-  const rawDiff = await getDiff(ws.path, job.baseSha, job.sha, logger);
+  const rawDiff = await getDiff(ws.path, job.baseSha, job.sha, logger, env.GITHUB_TOKEN || undefined);
   const diff = truncate(rawDiff, config.review.maxDiffChars);
 
   const prompt = buildReviewPrompt(job, diff);

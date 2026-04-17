@@ -20,6 +20,20 @@ export interface PrepareArgs {
 }
 
 /**
+ * GITHUB_TOKEN を URL やコマンドラインに露出させず、
+ * git の設定用環境変数で認証ヘッダを注入する (Git 2.31+)。
+ */
+function gitAuthEnv(token: string | undefined): Record<string, string> {
+  if (!token) return {};
+  const basic = Buffer.from(`x-access-token:${token}`).toString("base64");
+  return {
+    GIT_CONFIG_COUNT: "1",
+    GIT_CONFIG_KEY_0: "http.extraHeader",
+    GIT_CONFIG_VALUE_0: `Authorization: Basic ${basic}`,
+  };
+}
+
+/**
  * 対象コミット (sha) を含む作業ディレクトリを用意する。
  * shallow clone → fetch sha → checkout の順で行う。
  */
@@ -28,19 +42,22 @@ export async function prepareWorkspace(args: PrepareArgs): Promise<Workspace> {
   mkdirSync(workspacesDir, { recursive: true });
   const dir = join(workspacesDir, `${repo.replace("/", "__")}-${sha.slice(0, 12)}-${Date.now()}`);
 
-  const authedUrl = githubToken
-    ? repoUrl.replace("https://", `https://x-access-token:${githubToken}@`)
-    : repoUrl;
+  const authEnv = gitAuthEnv(githubToken);
+  const execOpts = (cwd?: string) => ({
+    stdio: "pipe" as const,
+    env: { ...process.env, ...authEnv },
+    ...(cwd ? { cwd } : {}),
+  });
 
   const cloneArgs = ["clone", "--quiet", "--filter=blob:none"];
   if (depth > 0) cloneArgs.push(`--depth=${depth}`);
-  cloneArgs.push(authedUrl, dir);
+  cloneArgs.push(repoUrl, dir);
 
   logger.debug({ dir, depth }, "git clone");
-  await execa("git", cloneArgs, { stdio: "pipe" });
+  await execa("git", cloneArgs, execOpts());
 
   try {
-    await execa("git", ["fetch", "--quiet", "--depth=200", "origin", sha], { cwd: dir });
+    await execa("git", ["fetch", "--quiet", "--depth=200", "origin", sha], execOpts(dir));
   } catch (err) {
     logger.debug(
       { err: (err as Error).message },
@@ -48,7 +65,7 @@ export async function prepareWorkspace(args: PrepareArgs): Promise<Workspace> {
     );
   }
   try {
-    await execa("git", ["checkout", "--quiet", sha], { cwd: dir });
+    await execa("git", ["checkout", "--quiet", sha], execOpts(dir));
   } catch (err) {
     logger.warn(
       { err: (err as Error).message, sha },
@@ -76,10 +93,14 @@ export async function getDiff(
   baseSha: string | undefined,
   headSha: string,
   logger: Logger,
+  githubToken?: string,
 ): Promise<string> {
+  const authEnv = gitAuthEnv(githubToken);
+  const opts = { cwd: workdir, env: { ...process.env, ...authEnv } };
+
   if (baseSha) {
     try {
-      await execa("git", ["fetch", "--quiet", "--depth=200", "origin", baseSha], { cwd: workdir });
+      await execa("git", ["fetch", "--quiet", "--depth=200", "origin", baseSha], opts);
     } catch {
       /* ignore */
     }
