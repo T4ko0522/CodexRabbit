@@ -33,3 +33,36 @@ export async function createGitHubClient(env: Env, logger: Logger): Promise<GitH
 
   return { octokit, token };
 }
+
+/**
+ * 指定ブランチが Protected Branch かを問い合わせる。
+ * - 未保護 (404) なら false
+ * - 権限不足等の他エラーも「保護されてるとは確定できない」として false を返し、
+ *   ログに警告を出す。ユーザーが意図的に protected-only モードを使う時は
+ *   Administration: Read 権限を App に付与している前提。
+ */
+export async function isBranchProtected(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  branch: string,
+  logger?: Logger,
+): Promise<boolean> {
+  try {
+    await octokit.rest.repos.getBranchProtection({ owner, repo, branch });
+    return true;
+  } catch (err) {
+    const status = (err as { status?: number }).status;
+    if (status === 404) return false;
+    logger?.warn(
+      {
+        repo: `${owner}/${repo}`,
+        branch,
+        status,
+        err: (err as Error).message,
+      },
+      "branch protection check failed, treating as not protected",
+    );
+    return false;
+  }
+}
