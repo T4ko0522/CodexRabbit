@@ -114,9 +114,22 @@ docker compose logs -f
 - `filters.skipBotSenders`: sender が `*[bot]` ならスキップ
 - `review.maxDiffChars`: diff の文字数上限 (超えた分は切り詰め)
 - `review.cloneDepth`: `git clone --depth`。0 以下で full clone
+- `review.includeExtensions`: レビュー対象の拡張子 (空なら全て)
+- `review.excludePaths`: 除外パス (glob 風。lockfile や dist 等)
+- `github.prReviewComment`: PR にレビューコメントを投稿 (`GITHUB_TOKEN` 必須)
+- `github.pushIssueOnSevere`: push レビューで Critical/High 検出時に Issue を自動作成
 - `discord.chunkSize`: 1 メッセージ最大文字数 (≤ 2000)
 - `discord.threadAutoArchiveMinutes`: 60 / 1440 / 4320 / 10080
 - `discord.enableThreadChat`: スレッド内での対話応答を有効化
+
+## GitHub フィードバック
+
+`GITHUB_TOKEN` (repo スコープの PAT) を設定すると、レビュー結果を Discord だけでなく GitHub にも直接反映します。
+
+- **PR レビューコメント**: `pull_request` イベント時、`pulls.createReview` で PR にレビュー本文を投稿します (`config.github.prReviewComment`)。
+- **push Issue 自動作成**: `push` イベント時、レビューに Critical / High の指摘が含まれていれば Issue を自動起票します (`config.github.pushIssueOnSevere`)。ラベル `codex-review` が付与されます。
+
+いずれも best-effort で動作し、GitHub API エラーは Discord 投稿やキュー処理をブロックしません。
 
 ## スレッド内での対話
 
@@ -156,5 +169,5 @@ import { describe, it, expect } from "vite-plus/test";
 ## セキュリティ
 
 - 全ての受信は HMAC-SHA256 でチェックします (`X-Codex-Review-Signature: sha256=<hex>`)
-- `GITHUB_TOKEN` は clone 時のみ URL に埋め込み、stdout/ログには出しません
+- `GITHUB_TOKEN` は `GIT_CONFIG_*` 環境変数経由で git に渡し、URL やコマンドラインには露出しません
 - Docker コンテナは非 root 化を行っていません (codex の挙動によっては後述の改修が必要)。必要に応じて `USER node` を追加してください
