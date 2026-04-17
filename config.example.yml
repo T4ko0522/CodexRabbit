@@ -1,0 +1,46 @@
+# codex-review の動作設定
+# 環境ごとに config.yml にコピーして編集する
+
+# 各イベント種別の ON/OFF
+events:
+  push: true
+  pull_request: true
+  issues: true
+
+# レビュー対象の絞り込み (いずれも空なら全て対象)
+filters:
+  # 許可するリポジトリ ("owner/repo" 完全一致。ワイルドカードは "owner/*" をサポート)
+  repositories: []
+  # push で対象にするブランチ (refs/heads/... の末尾と完全一致)
+  branches: []
+  # draft PR をスキップする
+  skipDraftPullRequests: true
+  # bot ユーザー (sender.type == Bot) をスキップする
+  skipBotSenders: true
+
+# レビュー生成の挙動
+review:
+  # diff 自体の最大文字数 (超える場合は切り詰める)
+  maxDiffChars: 200000
+  # clone 時の shallow depth (0 以下で full clone)
+  cloneDepth: 50
+  # レビュー対象とするファイル拡張子 (空なら全て)
+  includeExtensions: []
+  # 無視するパス (glob 風の単純一致)
+  excludePaths:
+    - node_modules/**
+    - dist/**
+    - build/**
+    - "*.lock"
+    - pnpm-lock.yaml
+    - package-lock.json
+    - yarn.lock
+
+# Discord への投稿フォーマット
+discord:
+  # 1 メッセージの最大文字数 (Discord の上限は 2000)
+  chunkSize: 1900
+  # スレッドの自動アーカイブ (分)。60, 1440, 4320, 10080 のいずれか
+  threadAutoArchiveMinutes: 1440
+  # スレッド内で Bot への返信/メンションを対話として扱うか
+  enableThreadChat: true

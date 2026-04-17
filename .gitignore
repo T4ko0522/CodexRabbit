@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.env.local
+config.yml
+data/
+workspaces/
+*.log
+.DS_Store

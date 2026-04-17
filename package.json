@@ -1,0 +1,39 @@
+{
+  "name": "codex-review",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GitHub pushes / PRs / issues をフックして Codex CLI でレビューし Discord へ投稿する Bot",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "vp build",
+    "start": "node dist/index.js",
+    "check": "vp check",
+    "typecheck": "tsc --noEmit",
+    "test": "vp test",
+    "test:watch": "vp test watch",
+    "coverage": "vp test run --coverage"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.0.2",
+    "better-sqlite3": "^11.5.0",
+    "discord.js": "^14.16.3",
+    "execa": "^9.5.1",
+    "fastify": "^5.1.0",
+    "p-queue": "^8.0.1",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0",
+    "yaml": "^2.6.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vite-plus": "^0.1.0"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules
+.env
+.env.local
+data
+workspaces
+.git
+.github
+*.log
+src
+tests
+vite.config.ts
+tsconfig.json
