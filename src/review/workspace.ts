@@ -1,5 +1,5 @@
 import { mkdirSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { join, extname } from "node:path";
 import { execa } from "execa";
 import type { Logger } from "../logger.ts";
 
@@ -137,4 +137,42 @@ export async function getDiff(
     logger.warn({ err: (err as Error).message }, "show head failed");
     return "";
   }
+}
+
+export interface DiffFilterOpts {
+  includeExtensions: string[];
+  excludePaths: string[];
+}
+
+/**
+ * unified diff をファイル単位で分割し、includeExtensions / excludePaths でフィルタする。
+ */
+export function filterDiff(raw: string, opts: DiffFilterOpts): string {
+  if (opts.includeExtensions.length === 0 && opts.excludePaths.length === 0) return raw;
+
+  // "diff --git a/..." で始まるファイル単位のハンクに分割
+  const parts = raw.split(/(?=^diff --git )/m);
+  const filtered = parts.filter((part) => {
+    const headerMatch = part.match(/^diff --git a\/(.+?) b\/(.+)/);
+    if (!headerMatch?.[2]) return true; // diff ヘッダでなければ保持
+    const filePath = headerMatch[2];
+
+    if (opts.excludePaths.length > 0 && matchAny(filePath, opts.excludePaths)) return false;
+    if (opts.includeExtensions.length > 0) {
+      const ext = extname(filePath).replace(/^\./, "");
+      return opts.includeExtensions.includes(ext);
+    }
+    return true;
+  });
+  return filtered.join("");
+}
+
+function matchAny(filePath: string, patterns: string[]): boolean {
+  return patterns.some((p) => {
+    if (p.includes("*")) {
+      const re = new RegExp(`^${p.replace(/\./g, "\\.").replace(/\*\*/g, ".*").replace(/(?<!\.\*)\*/g, "[^/]*")}$`);
+      return re.test(filePath);
+    }
+    return filePath === p || filePath.startsWith(`${p}/`);
+  });
 }

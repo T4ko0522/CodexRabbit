@@ -5,7 +5,7 @@ import type { ReviewJob } from "../types.ts";
 import { splitArgs } from "../env.ts";
 import { runCodex } from "./codex.ts";
 import { buildReviewPrompt } from "./prompt.ts";
-import { getDiff, prepareWorkspace } from "./workspace.ts";
+import { filterDiff, getDiff, prepareWorkspace } from "./workspace.ts";
 
 export interface ReviewResult {
   markdown: string;
@@ -56,7 +56,11 @@ export async function runReview(job: ReviewJob, deps: RunReviewDeps): Promise<Re
   });
 
   const rawDiff = await getDiff(ws.path, job.baseSha, job.sha, logger, env.GITHUB_TOKEN || undefined);
-  const diff = truncate(rawDiff, config.review.maxDiffChars);
+  const filteredDiff = filterDiff(rawDiff, {
+    includeExtensions: config.review.includeExtensions,
+    excludePaths: config.review.excludePaths,
+  });
+  const diff = truncate(filteredDiff, config.review.maxDiffChars);
 
   const prompt = buildReviewPrompt(job, diff);
   const markdown = await runCodex({
