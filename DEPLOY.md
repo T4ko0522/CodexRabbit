@@ -33,13 +33,13 @@ Docker イメージは GHCR で公開されているため、ホスト側に Nod
 
 <https://github.com/settings/apps/new> で App を作成します。
 
-| 設定項目                         | 値                                                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| App name                         | 任意 (mention 既定値に合わせるなら `CodexRabbit`)                                                       |
-| Homepage URL                     | 任意                                                                                                    |
-| Webhook                          | **Active のチェックを外す** (不要)                                                                      |
+| 設定項目                         | 値                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| App name                         | 任意 (mention 既定値に合わせるなら `CodexRabbit`)                               |
+| Homepage URL                     | 任意                                                                            |
+| Webhook                          | **Active のチェックを外す** (不要)                                              |
 | Repository permissions           | `Contents: Read & Write`, `Issues: Read & Write`, `Pull requests: Read & Write` |
-| Where can this app be installed? | **Only on this account**                                                                                |
+| Where can this app be installed? | **Only on this account**                                                        |
 
 > **permissions 追加の反映**: 既存の App に Permissions を追加した場合、GitHub 側の Installation 画面で「Accept new permissions」を押さないと新権限が有効になりません。
 
