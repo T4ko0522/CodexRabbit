@@ -38,16 +38,13 @@ Docker イメージは GHCR で公開されているため、ホスト側に Nod
 | App name                         | 任意 (mention 既定値に合わせるなら `CodexRabbit`)                                                       |
 | Homepage URL                     | 任意                                                                                                    |
 | Webhook                          | **Active のチェックを外す** (不要)                                                                      |
-| Repository permissions           | `Administration: Read`, `Contents: Read & Write`, `Issues: Read & Write`, `Pull requests: Read & Write` |
+| Repository permissions           | `Contents: Read & Write`, `Issues: Read & Write`, `Pull requests: Read & Write` |
 | Where can this app be installed? | **Only on this account**                                                                                |
 
-> **App 名と `mention.triggers` の整合性**: `config.yml` の `mention.triggers` の既定値は `@CodexRabbit[bot]` です。別の App 名にした場合は `mention.triggers` をその名前に合わせて書き換えてください。
->
 > **permissions 追加の反映**: 既存の App に Permissions を追加した場合、GitHub 側の Installation 画面で「Accept new permissions」を押さないと新権限が有効になりません。
 
 各 permission の用途:
 
-- `Administration: Read` — `events.push.mode: protected-only` で `getBranchProtection` を呼ぶのに必須
 - `Contents: Read & Write` — レビュー対象コード取得 (Read) + `repos.createCommitComment` (Write)
 - `Issues: Read & Write` — Issue レビュー取得 + `pushIssueOnSevere` で Issue 起票
 - `Pull requests: Read & Write` — PR レビューコメント投稿 + mention 経由で `pulls.get` 呼び出し
@@ -103,9 +100,9 @@ DISCORD_BOT_TOKEN=<Bot Token>
 DISCORD_CHANNEL_ID=<チャンネル ID>
 ```
 
-環境変数の全リストは README の「環境変数リファレンス」を参照してください。
+環境変数の全リストは **[REFERENCE.md](./REFERENCE.md)** を参照してください。
 
-`config.yml` ではイベントの ON/OFF、レビュー対象リポジトリのホワイトリスト、Discord 投稿フォーマットなどを調整できます。詳細は README の「設定リファレンス」を参照してください。
+`config.yml` ではイベントの ON/OFF、レビュー対象リポジトリのホワイトリスト、Discord 投稿フォーマットなどを調整できます。詳細は **[REFERENCE.md](./REFERENCE.md)** を参照してください。
 
 ### 2. 起動
 
