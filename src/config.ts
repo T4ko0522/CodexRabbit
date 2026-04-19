@@ -79,9 +79,9 @@ const ConfigSchema = z.object({
     .object({
       // PR/Issue コメント本文にこれらの文字列が含まれると mention 経由レビューを実行。
       // 空配列なら mention 機能そのものを無効化。
-      triggers: z.array(z.string()).default(["@CodexRabbit[bot]"]),
+      triggers: z.array(z.string()).default(["!codex-rabbit"]),
     })
-    .default({ triggers: ["@CodexRabbit[bot]"] }),
+    .default({ triggers: ["!codex-rabbit"] }),
 
   discord: z
     .object({

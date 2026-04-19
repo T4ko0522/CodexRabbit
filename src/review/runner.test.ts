@@ -33,7 +33,7 @@ const config: AppConfig = {
   filters: { repositories: [], branches: [], skipDraftPullRequests: true, skipBotSenders: true },
   review: { maxDiffChars: 200_000, cloneDepth: 50, includeExtensions: [], excludePaths: [] },
   github: { prReviewComment: true, pushCommitComment: true, pushIssueOnSevere: true },
-  mention: { triggers: ["@CodexRabbit[bot]"] },
+  mention: { triggers: ["!codex-rabbit"] },
   discord: {
     enabled: true,
     chunkSize: 1900,

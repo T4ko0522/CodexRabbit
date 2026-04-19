@@ -48,7 +48,7 @@ const baseConfig: AppConfig = {
   filters: { repositories: [], branches: [], skipDraftPullRequests: true, skipBotSenders: true },
   review: { maxDiffChars: 200_000, cloneDepth: 50, includeExtensions: [], excludePaths: [] },
   github: { prReviewComment: true, pushCommitComment: true, pushIssueOnSevere: true },
-  mention: { triggers: ["@CodexRabbit[bot]"] },
+  mention: { triggers: ["!codex-rabbit"] },
   discord: {
     enabled: true,
     chunkSize: 1900,
@@ -481,7 +481,7 @@ describe("HTTP server - mention via issue_comment", () => {
   });
 
   it("enqueues issue mention job", async () => {
-    const body = makeIssueCommentBody({ body: "@CodexRabbit[bot] please look", isPr: false });
+    const body = makeIssueCommentBody({ body: "!codex-rabbit please look", isPr: false });
     const res = await app.inject({
       method: "POST",
       url: "/webhook",
@@ -515,7 +515,7 @@ describe("HTTP server - mention via issue_comment", () => {
       enqueue: (job) => enqueued.push(job),
     });
     const body = makeIssueCommentBody({
-      body: "hey @CodexRabbit[bot]",
+      body: "hey !codex-rabbit",
       isPr: true,
       number: 42,
     });
@@ -551,7 +551,7 @@ describe("HTTP server - mention via issue_comment", () => {
       enqueue: (job) => enqueued.push(job),
     });
     const body = makeIssueCommentBody({
-      body: "@CodexRabbit[bot]",
+      body: "!codex-rabbit",
       isPr: true,
     });
     const res = await app.inject({

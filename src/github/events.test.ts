@@ -164,7 +164,7 @@ describe("buildJobFromPayload - issue_comment", () => {
     action: "created",
     comment: {
       id: 9999,
-      body: "re-review please @CodexRabbit[bot]",
+      body: "re-review please !codex-rabbit",
       html_url: "https://github.com/acme/widget/pull/42#issuecomment-9999",
       user: { login: "bob" },
     },
@@ -181,7 +181,7 @@ describe("buildJobFromPayload - issue_comment", () => {
     action: "created",
     comment: {
       id: 7777,
-      body: "please triage @CodexRabbit[bot]",
+      body: "please triage !codex-rabbit",
       html_url: "https://github.com/acme/widget/issues/7#issuecomment-7777",
       user: { login: "carol" },
     },
@@ -217,7 +217,7 @@ describe("buildJobFromPayload - issue_comment", () => {
           comment: { ...prCommentPayload.comment, body: "just a note" },
         },
       },
-      { mentionTriggers: ["@CodexRabbit[bot]"] },
+      { mentionTriggers: ["!codex-rabbit"] },
     );
     expect(job).toBeNull();
   });
@@ -230,7 +230,7 @@ describe("buildJobFromPayload - issue_comment", () => {
         sender: "bob",
         payload: { ...prCommentPayload, action: "deleted" },
       },
-      { mentionTriggers: ["@CodexRabbit[bot]"] },
+      { mentionTriggers: ["!codex-rabbit"] },
     );
     expect(job).toBeNull();
   });
@@ -243,7 +243,7 @@ describe("buildJobFromPayload - issue_comment", () => {
         sender: "bob",
         payload: prCommentPayload,
       },
-      { mentionTriggers: ["@CodexRabbit[bot]"] },
+      { mentionTriggers: ["!codex-rabbit"] },
     );
     expect(job?.kind).toBe("pull_request");
     expect(job?.number).toBe(42);
@@ -262,7 +262,7 @@ describe("buildJobFromPayload - issue_comment", () => {
         sender: "carol",
         payload: issueCommentPayload,
       },
-      { mentionTriggers: ["@CodexRabbit[bot]"] },
+      { mentionTriggers: ["!codex-rabbit"] },
     );
     expect(job?.kind).toBe("issues");
     expect(job?.number).toBe(7);
@@ -280,11 +280,11 @@ describe("buildJobFromPayload - issue_comment", () => {
           ...prCommentPayload,
           comment: {
             ...prCommentPayload.comment,
-            body: "> @CodexRabbit[bot] said something\nI agree",
+            body: "> !codex-rabbit said something\nI agree",
           },
         },
       },
-      { mentionTriggers: ["@CodexRabbit[bot]"] },
+      { mentionTriggers: ["!codex-rabbit"] },
     );
     expect(job).toBeNull();
   });
@@ -299,11 +299,11 @@ describe("buildJobFromPayload - issue_comment", () => {
           ...prCommentPayload,
           comment: {
             ...prCommentPayload.comment,
-            body: "check this:\n```\n@CodexRabbit[bot]\n```\n",
+            body: "check this:\n```\n!codex-rabbit\n```\n",
           },
         },
       },
-      { mentionTriggers: ["@CodexRabbit[bot]"] },
+      { mentionTriggers: ["!codex-rabbit"] },
     );
     expect(job).toBeNull();
   });
@@ -318,11 +318,11 @@ describe("buildJobFromPayload - issue_comment", () => {
           ...prCommentPayload,
           comment: {
             ...prCommentPayload.comment,
-            body: "use `@CodexRabbit[bot]` to trigger",
+            body: "use `!codex-rabbit` to trigger",
           },
         },
       },
-      { mentionTriggers: ["@CodexRabbit[bot]"] },
+      { mentionTriggers: ["!codex-rabbit"] },
     );
     expect(job).toBeNull();
   });
@@ -337,11 +337,11 @@ describe("buildJobFromPayload - issue_comment", () => {
           ...prCommentPayload,
           comment: {
             ...prCommentPayload.comment,
-            body: "> previous comment\n@CodexRabbit[bot] please review",
+            body: "> previous comment\n!codex-rabbit please review",
           },
         },
       },
-      { mentionTriggers: ["@CodexRabbit[bot]"] },
+      { mentionTriggers: ["!codex-rabbit"] },
     );
     expect(job?.kind).toBe("pull_request");
     expect(job?.triggeredBy).toBe("mention");
@@ -358,7 +358,7 @@ describe("buildJobFromPayload - issue_comment", () => {
           comment: { ...issueCommentPayload.comment, body: "hey /review please" },
         },
       },
-      { mentionTriggers: ["@CodexRabbit[bot]", "/review"] },
+      { mentionTriggers: ["!codex-rabbit", "/review"] },
     );
     expect(job?.kind).toBe("issues");
     expect(job?.triggeredBy).toBe("mention");

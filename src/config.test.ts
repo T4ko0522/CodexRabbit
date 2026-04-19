@@ -62,7 +62,7 @@ describe("loadConfig", () => {
     expect(cfg.events.pull_request.autoReviewOn).toEqual(["opened"]);
     expect(cfg.events.issues.enabled).toBe(true);
     expect(cfg.events.issues.autoReviewOn).toEqual([]);
-    expect(cfg.mention.triggers).toEqual(["@CodexRabbit[bot]"]);
+    expect(cfg.mention.triggers).toEqual(["!codex-rabbit"]);
     expect(cfg.review.maxDiffChars).toBe(200_000);
     expect(cfg.discord.chunkSize).toBe(1900);
     expect(cfg.github.prReviewComment).toBe(true);
