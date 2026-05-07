@@ -66,7 +66,7 @@ describe("loadConfig", () => {
     expect(cfg.review.maxDiffChars).toBe(200_000);
     expect(cfg.discord.chunkSize).toBe(1900);
     expect(cfg.github.prReviewComment).toBe(true);
-    expect(cfg.github.pushCommitComment).toBe(true);
+    expect(cfg.github.pushCommitComment).toBe(false);
     expect(cfg.github.pushIssueOnSevere).toBe(true);
   });
 

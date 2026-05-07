@@ -65,7 +65,9 @@ github:
   # PR にレビューコメントとして投稿する
   prReviewComment: true
   # push レビューで head コミットにコメントを投稿する
-  pushCommitComment: true
+  # 既定は false。true にすると人間のコミットフィードに自動コメントが残るため、
+  # 明示的に欲しい場合のみ有効化する
+  pushCommitComment: false
   # push レビューで Critical/High が見つかった場合 Issue を作成する
   pushIssueOnSevere: true
   # autoFixIssueLabel ラベル付きで opened された Issue を自動で fix → PR 作成する

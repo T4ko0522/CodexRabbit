@@ -69,7 +69,7 @@
 | キー                   | デフォルト     | 説明                                                           |
 | ---------------------- | -------------- | -------------------------------------------------------------- |
 | `prReviewComment`      | `true`         | PR にレビューコメントを投稿                                    |
-| `pushCommitComment`    | `true`         | push レビュー時に head コミットへコメントを投稿                |
+| `pushCommitComment`    | `false`        | push レビュー時に head コミットへコメントを投稿 (opt-in)       |
 | `pushIssueOnSevere`    | `true`         | push で Critical/High 検出時に Issue を自動作成                |
 | `autoFixOnSevereIssue` | `true`         | `autoFixIssueLabel` 付き Issue を自動 fix → PR 化 (起票者不問) |
 | `autoFixIssueLabel`    | `codex-review` | 自動 fix の対象 Issue ラベル                                   |

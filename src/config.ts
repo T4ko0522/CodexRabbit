@@ -65,8 +65,10 @@ const ConfigSchema = z.object({
   github: z
     .object({
       prReviewComment: z.boolean().default(true),
-      // push 時にコミットコメント (POST /commits/:sha/comments) で投稿
-      pushCommitComment: z.boolean().default(true),
+      // push 時にコミットコメント (POST /commits/:sha/comments) で投稿。
+      // 既定は false。既定で投稿すると人間のコミットフィードに自動コメントが
+      // 残り続け、ノイズや巻き戻しコストが大きいため、明示 opt-in に倒す。
+      pushCommitComment: z.boolean().default(false),
       pushIssueOnSevere: z.boolean().default(true),
       // codex-review (autoFixIssueLabel) ラベル付き Issue を自動で fix する
       autoFixOnSevereIssue: z.boolean().default(true),
@@ -79,7 +81,7 @@ const ConfigSchema = z.object({
     })
     .default({
       prReviewComment: true,
-      pushCommitComment: true,
+      pushCommitComment: false,
       pushIssueOnSevere: true,
       autoFixOnSevereIssue: true,
       autoFixIssueLabel: "codex-review",
