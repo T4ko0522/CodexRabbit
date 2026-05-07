@@ -150,4 +150,36 @@ describe("loadConfig", () => {
     writeFileSync(file, "workspace:\n  ttlMinutes: 0\n");
     expect(() => loadConfig(file)).toThrow();
   });
+
+  it("provides defaults for fix-related settings", () => {
+    const cfg = loadConfig(join(tmpDir, "nonexistent.yml"));
+    expect(cfg.mention.fixTriggers).toEqual(["@CodexRabbit[bot] fix"]);
+    expect(cfg.github.autoFixOnSevereIssue).toBe(true);
+    expect(cfg.github.fixLabel).toBe("codex-fix");
+    expect(cfg.github.fixBranchPrefix).toBe("codex-fix");
+    expect(cfg.github.autoFixIssueLabel).toBe("codex-review");
+  });
+
+  it("accepts custom fix triggers and labels", () => {
+    const file = join(tmpDir, "fix.yml");
+    writeFileSync(
+      file,
+      [
+        "mention:",
+        "  fixTriggers: ['@bot fix', '/codex fix']",
+        "github:",
+        "  autoFixOnSevereIssue: false",
+        "  fixLabel: ai-suggested",
+        "  fixBranchPrefix: ai/fix",
+        "  autoFixIssueLabel: needs-fix",
+        "",
+      ].join("\n"),
+    );
+    const cfg = loadConfig(file);
+    expect(cfg.mention.fixTriggers).toEqual(["@bot fix", "/codex fix"]);
+    expect(cfg.github.autoFixOnSevereIssue).toBe(false);
+    expect(cfg.github.fixLabel).toBe("ai-suggested");
+    expect(cfg.github.fixBranchPrefix).toBe("ai/fix");
+    expect(cfg.github.autoFixIssueLabel).toBe("needs-fix");
+  });
 });

@@ -13,8 +13,16 @@ const config: AppConfig = {
   },
   filters: { repositories: [], branches: [], skipDraftPullRequests: true, skipBotSenders: true },
   review: { maxDiffChars: 200_000, cloneDepth: 50, includeExtensions: [], excludePaths: [] },
-  github: { prReviewComment: true, pushCommitComment: true, pushIssueOnSevere: true },
-  mention: { triggers: ["!codex-rabbit"] },
+  github: {
+    prReviewComment: true,
+    pushCommitComment: true,
+    pushIssueOnSevere: true,
+    autoFixOnSevereIssue: true,
+    autoFixIssueLabel: "codex-review",
+    fixLabel: "codex-fix",
+    fixBranchPrefix: "codex-fix",
+  },
+  mention: { triggers: ["!codex-rabbit"], fixTriggers: ["@CodexRabbit[bot] fix"] },
   discord: {
     enabled: true,
     chunkSize: 1900,

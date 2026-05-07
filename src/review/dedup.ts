@@ -24,6 +24,12 @@ export function buildDedupKey(job: ReviewJob): string | null {
     if (!job.sha || !job.number) return null;
     return `pr:${job.repo}:${job.number}:${job.sha}`;
   }
+  if (job.kind === "fix") {
+    // 自動 fix は Issue 番号で一意化。同 Issue への重複 webhook を抑止する。
+    // (失敗時は呼び出し側で unregisterReview により再試行を許可)
+    if (!job.number) return null;
+    return `fix:${job.repo}:${job.number}`;
+  }
   if (!job.number) return null;
   const hash = createHash("sha256")
     .update(`${job.title}\n\n${job.body ?? ""}`)

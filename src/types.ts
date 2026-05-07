@@ -3,8 +3,12 @@ import { z } from "zod";
 /** HTTP で受け取る GitHub イベントの種類 */
 export type EventKind = "push" | "pull_request" | "issues" | "issue_comment";
 
-/** 内部ジョブとして扱う対象種別 (issue_comment は発火トリガにしかならないので含めない) */
-export type JobKind = "push" | "pull_request" | "issues";
+/**
+ * 内部ジョブとして扱う対象種別 (issue_comment は発火トリガにしかならないので含めない)。
+ * "fix" は Issue を起点にコード修正 PR を生成する派生種別。kind=fix の job は
+ * issues レビューと同じ識別子 (number/body) を使うが、別経路でハンドリングされる。
+ */
+export type JobKind = "push" | "pull_request" | "issues" | "fix";
 
 /** GitHub Actions から送られてくる HTTP ペイロード本体 */
 export interface IncomingWebhook {
@@ -21,7 +25,7 @@ export interface IncomingWebhook {
  * `ReviewJob` 型は本 schema から z.infer して再定義するため、二重管理にならない。
  */
 export const ReviewJobSchema = z.object({
-  kind: z.enum(["push", "pull_request", "issues"]),
+  kind: z.enum(["push", "pull_request", "issues", "fix"]),
   repo: z.string(),
   repoUrl: z.string(),
   /** push: head_commit.id / PR: pull_request.head.sha */

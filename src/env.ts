@@ -19,7 +19,14 @@ const EnvSchema = z.object({
 
   CODEX_BIN: z.string().default("codex"),
   CODEX_EXTRA_ARGS: z.string().optional().default(""),
+  // fix モード専用引数。空または未設定なら CODEX_EXTRA_ARGS にフォールバック。
+  // 書き込みを伴う実行 (--full-auto 等) を fix だけに限定したい運用向け。
+  CODEX_FIX_ARGS: z.string().optional().default(""),
   CODEX_TIMEOUT_MS: z.coerce.number().int().positive().default(900_000),
+
+  // 自動 fix で生成するコミットの author 情報。デフォルトは bot アカウント名義の noreply メール。
+  GIT_AUTHOR_NAME: z.string().default("codex-rabbit[bot]"),
+  GIT_AUTHOR_EMAIL: z.string().default("codex-rabbit[bot]@users.noreply.github.com"),
 
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
 
@@ -41,6 +48,20 @@ export function loadEnv(): Env {
     throw new Error(`Invalid environment variables:\n${details}`);
   }
   return parsed.data;
+}
+
+/**
+ * fix モードで Codex に渡す引数文字列を解決する。
+ * CODEX_FIX_ARGS が非空なら優先、空 (空白のみ含む) なら CODEX_EXTRA_ARGS にフォールバック。
+ * 書き込み権限を fix だけに付与したい運用と、共通設定で済ませたい運用の両方を許容する。
+ */
+export function resolveCodexFixArgs(env: {
+  CODEX_FIX_ARGS?: string;
+  CODEX_EXTRA_ARGS?: string;
+}): string {
+  const fix = (env.CODEX_FIX_ARGS ?? "").trim();
+  if (fix.length > 0) return env.CODEX_FIX_ARGS as string;
+  return env.CODEX_EXTRA_ARGS ?? "";
 }
 
 /**

@@ -130,4 +130,39 @@ describe("buildDedupKey", () => {
     const job = baseJob({ kind: "issues", number: 7, triggeredBy: "mention" });
     expect(buildDedupKey(job)).toBeNull();
   });
+
+  it("derives a key from auto-fix issue number", () => {
+    const job = baseJob({
+      kind: "fix",
+      number: 123,
+      triggeredBy: "auto",
+    });
+    expect(buildDedupKey(job)).toBe("fix:acme/app:123");
+  });
+
+  it("returns null for auto fix without issue number", () => {
+    const job = baseJob({ kind: "fix", triggeredBy: "auto" });
+    expect(buildDedupKey(job)).toBeNull();
+  });
+
+  it("auto-fix and review issues share no key for the same number", () => {
+    const fix = baseJob({ kind: "fix", number: 42, triggeredBy: "auto" });
+    const issue = baseJob({ kind: "issues", number: 42, title: "T", body: "B" });
+    expect(buildDedupKey(fix)).not.toBe(buildDedupKey(issue));
+  });
+
+  it("mention-fix uses the mention key pattern with kind=fix", () => {
+    const job = baseJob({
+      kind: "fix",
+      number: 7,
+      triggeredBy: "mention",
+      commentId: 555,
+    });
+    expect(buildDedupKey(job)).toBe("mention:acme/app:fix:7:555");
+  });
+
+  it("returns null for mention-fix without commentId", () => {
+    const job = baseJob({ kind: "fix", number: 7, triggeredBy: "mention" });
+    expect(buildDedupKey(job)).toBeNull();
+  });
 });

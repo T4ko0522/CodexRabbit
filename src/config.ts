@@ -68,11 +68,23 @@ const ConfigSchema = z.object({
       // push 時にコミットコメント (POST /commits/:sha/comments) で投稿
       pushCommitComment: z.boolean().default(true),
       pushIssueOnSevere: z.boolean().default(true),
+      // codex-review (autoFixIssueLabel) ラベル付き Issue を自動で fix する
+      autoFixOnSevereIssue: z.boolean().default(true),
+      // 自動 fix の対象とする Issue ラベル (誰が起票したかに依らずこのラベルがあれば fix)
+      autoFixIssueLabel: z.string().default("codex-review"),
+      // 作成 PR に付けるラベル
+      fixLabel: z.string().default("codex-fix"),
+      // 作成ブランチ名の prefix。最終形は "<prefix>/issue-<number>-<timestamp>"
+      fixBranchPrefix: z.string().default("codex-fix"),
     })
     .default({
       prReviewComment: true,
       pushCommitComment: true,
       pushIssueOnSevere: true,
+      autoFixOnSevereIssue: true,
+      autoFixIssueLabel: "codex-review",
+      fixLabel: "codex-fix",
+      fixBranchPrefix: "codex-fix",
     }),
 
   mention: z
@@ -80,8 +92,12 @@ const ConfigSchema = z.object({
       // PR/Issue コメント本文にこれらの文字列が含まれると mention 経由レビューを実行。
       // 空配列なら mention 機能そのものを無効化。
       triggers: z.array(z.string()).default(["!codex-rabbit"]),
+      // Issue コメントにこれらが含まれると fix を実行。fix トリガーは review トリガーより
+      // 優先されるため、`@CodexRabbit[bot] fix` のように review trigger を含む形でも fix にルートされる。
+      // 空配列なら mention 経由 fix を無効化。
+      fixTriggers: z.array(z.string()).default(["@CodexRabbit[bot] fix"]),
     })
-    .default({ triggers: ["!codex-rabbit"] }),
+    .default({ triggers: ["!codex-rabbit"], fixTriggers: ["@CodexRabbit[bot] fix"] }),
 
   discord: z
     .object({

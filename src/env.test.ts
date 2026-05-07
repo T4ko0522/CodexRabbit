@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
-import { loadEnv, splitArgs } from "./env.ts";
+import { loadEnv, resolveCodexFixArgs, splitArgs } from "./env.ts";
 
 describe("splitArgs", () => {
   it("returns empty array for empty string", () => {
@@ -100,5 +100,44 @@ describe("loadEnv", () => {
   it("rejects non-positive SHUTDOWN_TIMEOUT_MS", () => {
     process.env.SHUTDOWN_TIMEOUT_MS = "0";
     expect(() => loadEnv()).toThrow("SHUTDOWN_TIMEOUT_MS");
+  });
+
+  it("provides defaults for fix-related env", () => {
+    const env = loadEnv();
+    expect(env.CODEX_FIX_ARGS).toBe("");
+    expect(env.GIT_AUTHOR_NAME).toBe("codex-rabbit[bot]");
+    expect(env.GIT_AUTHOR_EMAIL).toBe("codex-rabbit[bot]@users.noreply.github.com");
+  });
+
+  it("accepts overrides for git author and CODEX_FIX_ARGS", () => {
+    process.env.CODEX_FIX_ARGS = "--full-auto --model gpt-5-codex";
+    process.env.GIT_AUTHOR_NAME = "ai-bot";
+    process.env.GIT_AUTHOR_EMAIL = "ai-bot@example.com";
+    const env = loadEnv();
+    expect(env.CODEX_FIX_ARGS).toBe("--full-auto --model gpt-5-codex");
+    expect(env.GIT_AUTHOR_NAME).toBe("ai-bot");
+    expect(env.GIT_AUTHOR_EMAIL).toBe("ai-bot@example.com");
+  });
+});
+
+describe("resolveCodexFixArgs", () => {
+  it("returns CODEX_FIX_ARGS when set", () => {
+    expect(
+      resolveCodexFixArgs({ CODEX_FIX_ARGS: "--full-auto", CODEX_EXTRA_ARGS: "--debug" }),
+    ).toBe("--full-auto");
+  });
+
+  it("falls back to CODEX_EXTRA_ARGS when CODEX_FIX_ARGS is empty", () => {
+    expect(resolveCodexFixArgs({ CODEX_FIX_ARGS: "", CODEX_EXTRA_ARGS: "--model x" })).toBe(
+      "--model x",
+    );
+  });
+
+  it("returns empty when neither is set", () => {
+    expect(resolveCodexFixArgs({ CODEX_FIX_ARGS: "", CODEX_EXTRA_ARGS: "" })).toBe("");
+  });
+
+  it("treats whitespace-only CODEX_FIX_ARGS as unset", () => {
+    expect(resolveCodexFixArgs({ CODEX_FIX_ARGS: "   ", CODEX_EXTRA_ARGS: "--m" })).toBe("--m");
   });
 });
