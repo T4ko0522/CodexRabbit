@@ -25,6 +25,11 @@ mention:
   # 空配列にすると mention 機能そのものを無効化
   triggers:
     - "@CodexRabbit[bot]"
+  # Issue コメントにこれらが含まれると自動 fix (修正 PR の作成) を実行する
+  # PR コメント上での fix トリガーは無視される (PR は fix の対象外)
+  # 空配列にすると mention 経由 fix を無効化
+  fixTriggers:
+    - "@CodexRabbit[bot] fix"
 
 # レビュー対象の絞り込み (いずれも空なら全て対象)
 filters:
@@ -63,6 +68,16 @@ github:
   pushCommitComment: true
   # push レビューで Critical/High が見つかった場合 Issue を作成する
   pushIssueOnSevere: true
+  # autoFixIssueLabel ラベル付きで opened された Issue を自動で fix → PR 作成する
+  # 起票者が誰か (人間 / bot 問わず) は問わない。手動でラベルを付けた Issue にも反応する
+  autoFixOnSevereIssue: true
+  # 自動 fix の対象とする Issue ラベル
+  autoFixIssueLabel: codex-review
+  # 自動 fix で作成する PR に付けるラベル
+  fixLabel: codex-fix
+  # 自動 fix で作成するブランチ名の prefix
+  # 最終形は "<prefix>/issue-<番号>-<タイムスタンプ>"
+  fixBranchPrefix: codex-fix
 
 # Discord 連携
 discord:

@@ -18,8 +18,25 @@ GitHub の push / pull_request / issues / issue_comment を契機に **Codex CLI
 - **コミットコメント**: push レビューでは head コミットに `repos.createCommitComment` でレビューを残す。`config.github.pushCommitComment` で制御
 - **push Issue 自動作成**: レビューに `重大度: Critical` または `重大度: High` が含まれる場合、`codex-review` ラベル付きの Issue を自動起票。`config.github.pushIssueOnSevere` で制御
 - **mention 経由レビュー**: PR/Issue コメント本文に `mention.triggers` の文字列が含まれると、その PR/Issue に対するレビューが追加で走る。`synchronize` 後に再レビューを依頼したり、既存 Issue の棚卸しに使用
+- **自動 fix → PR 作成**: `codex-review` ラベル付き Issue が opened されると、Codex に該当 Issue の修正を依頼し、生成された差分から修正 PR (`codex-fix` ラベル) を自動で立てる。Issue コメントに `@CodexRabbit[bot] fix` (`mention.fixTriggers`) を書くことで任意 Issue に対して明示的にも起動可能。`config.github.autoFixOnSevereIssue` で制御
 
 いずれも best-effort で動作し、GitHub API エラーは Discord 投稿やキュー処理をブロックしません。
+
+## 自動 fix の動作
+
+| 起動経路         | 条件                                                                           | 例                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| **自動**         | Issue が `opened` され、`autoFixIssueLabel` (既定 `codex-review`) が付いている | push レビューが起こした severe Issue / 運用者が手動で `codex-review` ラベルを付けた Issue |
+| **明示 mention** | Issue コメントに `mention.fixTriggers` のいずれかが含まれる (Issue でのみ有効) | `@CodexRabbit[bot] fix`                                                                   |
+
+fix のフロー:
+
+1. デフォルトブランチを clone → `<fixBranchPrefix>/issue-<N>-<timestamp>` ブランチを切る
+2. Codex (`CODEX_FIX_ARGS` または `CODEX_EXTRA_ARGS`) に Issue 内容と編集権限を渡す
+3. ファイル変更が生成されなければ Issue に「変更を生成できませんでした」コメントを投稿し終了
+4. 変更があれば `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` 名義で 1 コミットにまとめ、`origin` に push
+5. `pulls.create` で **ready-for-review** な PR を作成 (`Closes #N` 付き / `fixLabel` ラベル)
+6. 起因 Issue に PR URL のコメントを投稿、Discord にもサマリ + PR URL を投稿
 
 ## Discordでの対話
 
