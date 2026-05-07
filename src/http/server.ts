@@ -121,9 +121,12 @@ export async function startServer({
       }
     }
 
-    // fix はラベル/明示 mention で意図的にトリガーされるため bot 起票でも通す。
-    // (push レビューの自動 Issue 化 → 自動 fix の流れを成立させるのに必要)
-    if (config.filters.skipBotSenders && job.kind !== "fix" && /\[bot\]$/i.test(job.sender)) {
+    // 自動 fix (push レビュー → severe Issue 起票 → 自動 fix の流れ) のみ
+    // bot 起票でも通す。CodexRabbit 自身が起票した Issue に対する自己ループとして必要。
+    // mention 由来の fix は他 bot から `@CodexRabbit[bot] fix` を投げ込まれる経路になり得るので、
+    // 通常どおり bot sender をスキップして暴走/誤爆を防ぐ。
+    const isAutoFix = job.kind === "fix" && job.triggeredBy === "auto";
+    if (config.filters.skipBotSenders && !isAutoFix && /\[bot\]$/i.test(job.sender)) {
       logger.info({ sender: job.sender }, "bot sender, skip");
       return reply.code(202).send({ ok: true, skipped: "bot-sender" });
     }

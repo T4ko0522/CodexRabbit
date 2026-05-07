@@ -448,8 +448,14 @@ describe("HTTP server - PR autoReviewOn", () => {
 });
 
 describe("HTTP server - mention via issue_comment", () => {
-  function makeIssueCommentBody(opts: { body: string; isPr?: boolean; number?: number }) {
+  function makeIssueCommentBody(opts: {
+    body: string;
+    isPr?: boolean;
+    number?: number;
+    sender?: string;
+  }) {
     const number = opts.number ?? 42;
+    const sender = opts.sender ?? "carol";
     const issue: Record<string, unknown> = {
       number,
       title: "X",
@@ -462,14 +468,14 @@ describe("HTTP server - mention via issue_comment", () => {
     return JSON.stringify({
       event: "issue_comment",
       repository: "acme/app",
-      sender: "carol",
+      sender,
       payload: {
         action: "created",
         comment: {
           id: 100,
           body: opts.body,
           html_url: "https://github.com/acme/app/x#issuecomment-100",
-          user: { login: "carol" },
+          user: { login: sender },
         },
         issue,
       },
@@ -568,6 +574,26 @@ describe("HTTP server - mention via issue_comment", () => {
     expect(enqueued).toHaveLength(1);
     expect(enqueued[0]!.kind).toBe("fix");
     expect(enqueued[0]!.triggeredBy).toBe("mention");
+  });
+
+  it("skips fix-mention when sender is a bot (prevents bot-loop / cross-bot misfire)", async () => {
+    const body = makeIssueCommentBody({
+      body: "@CodexRabbit[bot] fix this",
+      isPr: false,
+      sender: "other-bot[bot]",
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/webhook",
+      headers: {
+        "content-type": "application/json",
+        "x-codex-review-signature": sign(body),
+      },
+      body,
+    });
+    expect(res.statusCode).toBe(202);
+    expect(res.json().skipped).toBe("bot-sender");
+    expect(enqueued).toHaveLength(0);
   });
 
   it("skips PR mention when pulls.get fails", async () => {
